@@ -46,12 +46,12 @@ Creates an application that consumes and/or produces kafka messages. For most pr
 that only the following need to be created: `KafkaSchema`, `KafkaTopic`, `KafkaApp`.
 
 ## Goals
-- Simple (no kafka proxies, not replacing kafka clients)
-- Secure (Kafka ACLs, mTLS, cert-manager)
+- Simple (no kafka proxies, no SDKs, not replacing kafka clients)
+- Secure (Kafka ACLs, no developer application dependencies, mTLS, cert-manager)
 - Cheap (no required sidecars or PVs for pods, low resource requirements for ksflow pods)
 - Autoscaling support (keda)
 - Support many Kubernetes clusters using the same Kafka (i.e. topic prefixes, ACLs?)
-- Agnostic to programming language, kafka-client, and cloud-provider
+- Agnostic to programming language, kafka-client, and cloud-provider/on-prem
 - Kubernetes-native (CRDs)
 - Schema registry support (confluent, apicurio)
 
@@ -59,9 +59,13 @@ that only the following need to be created: `KafkaSchema`, `KafkaTopic`, `KafkaA
 - Simplify application logic for processing streams (i.e. stateful aggregations)
 - Abstract Kafka or Kubernetes capabilities to provide other options (i.e. Pulsar, Jetstream, etc.)
 
-## Recommended tools
-- [Prometheus](https://github.com/prometheus/prometheus) (for monitoring)
-- [Grafana](https://github.com/grafana/grafana) (for observability)
+## External dependencies
+| Tool                                                         | Required | Purpose       |
+|--------------------------------------------------------------|----------|---------------|
+| [Cert Manager](https://github.com/cert-manager/cert-manager) | yes      | Security      |
+| [KEDA](https://github.com/kedacore/keda)                     | yes      | Autoscaling   |
+| [Prometheus](https://github.com/prometheus/prometheus)       | no       | Monitoring    |
+| [Grafana](https://github.com/grafana/grafana)                | no       | Observability |
 
 ## Documentation
 - [Quick Start](./docs/quick-start.md)
