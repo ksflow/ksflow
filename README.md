@@ -1,4 +1,4 @@
-![Grafana](docs/logo-horizontal.png)
+![Ksflow](images/ksflow-logo-3800x670-transparent.png)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Ksflow is a tool to simplify configuration management related to running Kubernetes pods that process Kafka topics.
@@ -7,12 +7,13 @@ Application security and configuration are standardized, while still allowing ap
 
 To accomplish this, Ksflow provides a Kubernetes controller and the introduces the following CRDs:
 
-| CRD           | Namespaced | Owns                     |
-|---------------|------------|--------------------------|
-| `KafkaACL`    | yes        | ACL (kafka)              |
-| `KafkaTopic`  | yes        | Topic (kafka)            |
-| `KafkaSchema` | yes        | Schema (schema-registry) |
-| `KafkaUser`   | yes        | Certificate (kubernetes) |
+| CRD           | Short Name | Namespaced | Owns                                                        |
+|---------------|------------|------------|-------------------------------------------------------------|
+| `KafkaACL`    | `kacl`     | yes        | ACL (kafka)                                                 |
+| `KafkaTopic`  | `ktopic`   | yes        | Topic (kafka)                                               |
+| `KafkaSchema` | `kschema`  | yes        | Schema (schema-registry)                                    |
+| `KafkaUser`   | `kuser`    | yes        | Certificate (kubernetes)                                    |
+| `KafkaApp`    | `kapp`     | yes        | KafkaACL, KafkaUser, StatefulSet, ScaledObject (kubernetes) |
 
 The Ksflow controller is configured to point to a single Kafka cluster, operating on topics under a configurable prefix (i.e. `my-cluster.`).
 For security Ksflow relies on Kafka's mTLS client authentication and cert-manager [Certificates](https://cert-manager.io/docs/concepts/certificate/)
@@ -39,12 +40,12 @@ authorization.
 
 ## Goals
 - Simple (no kafka proxies, not replacing kafka clients)
-- Secure (Kafka ACLs, mTLS)
+- Secure (Kafka ACLs, mTLS, cert-manager)
 - Cheap (no required sidecars or PVs for pods, low resource requirements for ksflow pods)
-- Autoscaling support
-- Many Kubernetes clusters using the same Kafka (i.e. topic prefixes, ACLs?)
+- Autoscaling support (keda)
+- Support many Kubernetes clusters using the same Kafka (i.e. topic prefixes, ACLs?)
 - Agnostic to programming language, kafka-client, and cloud-provider
-- Kubernetes-native
+- Kubernetes-native (CRDs)
 - Schema registry support (confluent, apicurio)
 
 ## Not Goals
