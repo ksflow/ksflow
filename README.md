@@ -31,12 +31,19 @@ You can then use features built into Kubernetes to manage Kafka topics. This can
 - Kubernetes [Resource Quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/#object-count-quota) used to limit the number of topics that can be created in a namespace.
 - Kubernetes [Admission Webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) used to validate or mutate custom resources (i.e. limit total number of bytes that can be stored for a namespace, by computing total `retention.bytes` for all topic-partitions)
 
+#### KafkaSchema
+Creates a schema in a schema registry (i.e. Confluent, Apicurio).
+
 #### KafkaUser
 A `KafkaUser` creates a cert-manager `Certificate` resource in the same kubernetes namespace with the same name.
 Cert-manager is then responsible for creating the secret, which can be used by pods for authentication to external services (i.e. Kafka, Schema Registry).
 
 Pods may be associated with a `KafkaUser` through an annotation, which causes an admission webhook to inject the necessary
 authorization.
+
+#### KafkaApp
+Creates an application that consumes and/or produces kafka messages. For most production-ready applications, the intent is
+that only the following need to be created: `KafkaSchema`, `KafkaTopic`, `KafkaApp`.
 
 ## Goals
 - Simple (no kafka proxies, not replacing kafka clients)
@@ -53,7 +60,6 @@ authorization.
 - Abstract Kafka or Kubernetes capabilities to provide other options (i.e. Pulsar, Jetstream, etc.)
 
 ## Recommended tools
-- [KEDA](https://github.com/kedacore/keda) (for autoscaling based on Kafka consumer group)
 - [Prometheus](https://github.com/prometheus/prometheus) (for monitoring)
 - [Grafana](https://github.com/grafana/grafana) (for observability)
 
