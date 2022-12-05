@@ -20,10 +20,10 @@ import (
 	"flag"
 	"os"
 
-	"github.com/dseapy/controllers/kafkaacl"
-	"github.com/dseapy/controllers/kafkaschema"
-	"github.com/dseapy/controllers/kafkatopic"
-	"github.com/dseapy/controllers/kafkauser"
+	"github.com/ksflow/ksflow/controllers/kafkaacl"
+	"github.com/ksflow/ksflow/controllers/kafkaschema"
+	"github.com/ksflow/ksflow/controllers/kafkatopic"
+	"github.com/ksflow/ksflow/controllers/kafkauser"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	dseapyv1alpha1 "github.com/dseapy/api/v1alpha1"
+	kfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -48,7 +48,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(dseapyv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kfv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -67,7 +67,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	var err error
-	ctrlConfig := dseapyv1alpha1.KsflowConfig{}
+	ctrlConfig := kfv1.KsflowConfig{}
 	options := ctrl.Options{Scheme: scheme}
 	if configFile != "" {
 		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))

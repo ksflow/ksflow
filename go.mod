@@ -1,4 +1,4 @@
-module github.com/dseapy
+module github.com/ksflow/ksflow
 
 go 1.19
 

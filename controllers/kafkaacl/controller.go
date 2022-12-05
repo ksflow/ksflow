@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	dseapyv1alpha1 "github.com/dseapy/api/v1alpha1"
+	kfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
 // Reconciler reconciles a KafkaACL object
@@ -32,10 +32,6 @@ type Reconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
-
-//+kubebuilder:rbac:groups=dseapy.github.com,resources=kafkaacls,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=dseapy.github.com,resources=kafkaacls/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=dseapy.github.com,resources=kafkaacls/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop for KafkaPolicies
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -49,6 +45,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dseapyv1alpha1.KafkaACL{}).
+		For(&kfv1.KafkaACL{}).
 		Complete(r)
 }

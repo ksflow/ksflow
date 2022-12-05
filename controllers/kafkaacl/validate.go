@@ -19,8 +19,8 @@ package kafkaacl
 import (
 	"fmt"
 
-	"github.com/dseapy/api/v1alpha1"
-	"github.com/dseapy/validation"
+	"github.com/ksflow/ksflow/api/v1alpha1"
+	"github.com/ksflow/ksflow/validation"
 	"github.com/twmb/franz-go/pkg/kmsg"
 )
 
