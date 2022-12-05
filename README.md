@@ -3,9 +3,11 @@
 
 Ksflow is a tool to simplify configuration management related to running Kubernetes pods that process Kafka topics.
 
-Application security and configuration are standardized, while still allowing applications to use their preferred languages and Kafka clients.
+Application security and configuration are standardized for containers, while allowing developers to use their preferred languages and Kafka clients.
 
-To accomplish this, Ksflow provides a Kubernetes controller and the introduces the following CRDs:
+## CRDs
+
+Ksflow provides a Kubernetes controller and introduces the following CRDs:
 
 | CRD           | Short Name | Namespaced | Owns                                                        |
 |---------------|------------|------------|-------------------------------------------------------------|
@@ -16,7 +18,7 @@ To accomplish this, Ksflow provides a Kubernetes controller and the introduces t
 | `KafkaApp`    | `kapp`     | yes        | KafkaACL, KafkaUser, StatefulSet, ScaledObject (kubernetes) |
 
 The Ksflow controller is configured to point to a single Kafka cluster, operating on topics under a configurable prefix (i.e. `my-cluster.`).
-For security Ksflow relies on Kafka's mTLS client authentication and cert-manager [Certificates](https://cert-manager.io/docs/concepts/certificate/)
+For security, Ksflow relies on Kafka's mTLS client authentication and cert-manager [Certificates](https://cert-manager.io/docs/concepts/certificate/)
 to manage pod permissions for consuming/producing from/to Kafka topics.
 
 
@@ -32,7 +34,7 @@ You can then use features built into Kubernetes to manage Kafka topics. This can
 - Kubernetes [Admission Webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) used to validate or mutate custom resources (i.e. limit total number of bytes that can be stored for a namespace, by computing total `retention.bytes` for all topic-partitions)
 
 #### KafkaSchema
-Creates a schema in a schema registry (i.e. Confluent, Apicurio).
+Creates a schema in a schema registry.
 
 #### KafkaUser
 A `KafkaUser` creates a cert-manager `Certificate` resource in the same kubernetes namespace with the same name.
@@ -53,19 +55,22 @@ that only the following need to be created: `KafkaSchema`, `KafkaTopic`, `KafkaA
 - Support many Kubernetes clusters using the same Kafka (i.e. topic prefixes, ACLs?)
 - Agnostic to programming language, kafka-client, and cloud-provider/on-prem
 - Kubernetes-native (CRDs)
-- Schema registry support (confluent, apicurio)
+- Schema registry support
 
 ## Not Goals
+- Assist with running any services that many organizations already use (i.e. Kafka, Schema Registry)
 - Simplify application logic for processing streams (i.e. stateful aggregations)
 - Abstract Kafka or Kubernetes capabilities to provide other options (i.e. Pulsar, Jetstream, etc.)
 
 ## External dependencies
 | Tool                                                         | Required | Purpose       |
 |--------------------------------------------------------------|----------|---------------|
+| *Schema Registry                                             | yes      | Schemas       |
 | [Cert Manager](https://github.com/cert-manager/cert-manager) | yes      | Security      |
 | [KEDA](https://github.com/kedacore/keda)                     | yes      | Autoscaling   |
 | [Prometheus](https://github.com/prometheus/prometheus)       | no       | Monitoring    |
 | [Grafana](https://github.com/grafana/grafana)                | no       | Observability |
+**Schema Registry must be compatible with Confluent SR clients (i.e. [Confluent](https://github.com/confluentinc/schema-registry), [Apicurio](https://github.com/Apicurio/apicurio-registry), [Karapace](https://github.com/aiven/karapace))*
 
 ## Documentation
 - [Quick Start](./docs/quick-start.md)

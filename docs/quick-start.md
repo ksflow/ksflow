@@ -1,10 +1,16 @@
 # Quick Start
 
-Before getting started you will need the following on your path:
+**The quickstart is not a production-ready installation. Among other things, it installs a kafka cluster on kubernetes
+without persistence to ensure it can run on clusters without storage. DO NOT use this installation as-is for processing
+any important data. See [install](install.md) for a production install.**
+
+Before getting started you will need the following binaries on your path:
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) with access to a Kubernetes cluster.
-- [kafka client](https://kafka.apache.org/downloads) with access to a Kafka cluster.
 - [helm](https://github.com/helm/helm)
 - [helmfile](https://github.com/helmfile/helmfile)
+
+ **ephemeral** schema-registry and kafka clusters, **DO NOT store any important data on these**.
+You will want to replace these with actual .
 
 Below is an example of installing all the necessary components on a new Kubernetes cluster.
 Your installation may vary depending on your setup and requirements.
