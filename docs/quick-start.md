@@ -1,6 +1,5 @@
 # Quick Start
 
-
 Before getting started you will need the following on your path:
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) with access to a Kubernetes cluster.
 - [kafka client](https://kafka.apache.org/downloads) with access to a Kafka cluster.

@@ -14,24 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package kafkaapp
 
 import (
-	"fmt"
-
 	"github.com/ksflow/ksflow/api/v1alpha1"
-	"github.com/ksflow/ksflow/validation"
 )
 
-// Validate ensures the KsflowConfig is valid
-func Validate(config *v1alpha1.KsflowConfig) error {
-	if config.Namespaced {
-		if err := validation.ValidateRFC1035LabelName(config.Namespace); err != nil {
-			return err
-		}
-	}
-	if err := validation.ValidateRFC1035LabelName(config.GlobalKafkaConfig.GlobalKafkaTopicPrefix); err != nil {
-		return fmt.Errorf(`invalid topic prefix: %v`, err)
-	}
+// Validate ensures the KafkaACL is valid
+func Validate(ka *v1alpha1.KafkaApp) error {
+	//TODO
 	return nil
 }

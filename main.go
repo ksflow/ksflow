@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/ksflow/ksflow/controllers/kafkaacl"
+	"github.com/ksflow/ksflow/controllers/kafkaapp"
 	"github.com/ksflow/ksflow/controllers/kafkaschema"
 	"github.com/ksflow/ksflow/controllers/kafkatopic"
 	"github.com/ksflow/ksflow/controllers/kafkauser"
@@ -37,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	kfv1 "github.com/ksflow/ksflow/api/v1alpha1"
-	//+kubebuilder:scaffold:imports
 )
 
 var (
@@ -47,9 +47,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(kfv1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -83,13 +81,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&kafkatopic.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaTopic")
-		os.Exit(1)
-	}
 	if err = (&kafkaacl.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -97,11 +88,11 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaACL")
 		os.Exit(1)
 	}
-	if err = (&kafkauser.Reconciler{
+	if err = (&kafkaapp.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaUser")
+		setupLog.Error(err, "unable to create controller", "controller", "KafkaApp")
 		os.Exit(1)
 	}
 	if err = (&kafkaschema.Reconciler{
@@ -111,7 +102,20 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaSchema")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
+	if err = (&kafkatopic.Reconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KafkaTopic")
+		os.Exit(1)
+	}
+	if err = (&kafkauser.Reconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KafkaUser")
+		os.Exit(1)
+	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
