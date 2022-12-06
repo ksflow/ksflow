@@ -1,4 +1,3 @@
-
 ## CRDs
 
 Ksflow introduces the following CRDs:
@@ -14,7 +13,6 @@ Ksflow introduces the following CRDs:
 The Ksflow controller is configured to point to a single Kafka cluster, operating on topics under a configurable prefix (i.e. `my-cluster.`).
 For security, Ksflow relies on Kafka's mTLS client authentication and cert-manager [Certificates](https://cert-manager.io/docs/concepts/certificate/)
 to manage pod permissions for consuming/producing from/to Kafka topics.
-
 
 ### KafkaACL
 Creates [Kafka ACLs](https://docs.confluent.io/platform/current/kafka/authorization.html) that give one or all
