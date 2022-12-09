@@ -1,0 +1,27 @@
+# permissions for end users to view ksflowconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: ksflowconfig-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ksflow
+    app.kubernetes.io/part-of: ksflow
+    app.kubernetes.io/managed-by: kustomize
+  name: ksflowconfig-viewer-role
+rules:
+- apiGroups:
+  - ksflow.io
+  resources:
+  - ksflowconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - ksflowconfigs/status
+  verbs:
+  - get
