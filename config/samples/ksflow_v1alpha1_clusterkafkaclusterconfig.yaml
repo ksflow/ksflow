@@ -1,0 +1,12 @@
+apiVersion: ksflow.io/v1alpha1
+kind: ClusterKafkaClusterConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterkafkaclusterconfig
+    app.kubernetes.io/instance: clusterkafkaclusterconfig-sample
+    app.kubernetes.io/part-of: ksflow
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ksflow
+  name: clusterkafkaclusterconfig-sample
+spec:
+  # TODO(user): Add fields here

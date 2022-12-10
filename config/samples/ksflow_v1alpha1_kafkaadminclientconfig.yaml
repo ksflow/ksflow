@@ -1,0 +1,12 @@
+apiVersion: ksflow.io/v1alpha1
+kind: KafkaAdminClientConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: kafkaadminclientconfig
+    app.kubernetes.io/instance: kafkaadminclientconfig-sample
+    app.kubernetes.io/part-of: ksflow
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ksflow
+  name: kafkaadminclientconfig-sample
+spec:
+  # TODO(user): Add fields here
