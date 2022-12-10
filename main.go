@@ -66,7 +66,11 @@ func main() {
 
 	var err error
 	ksflowConfig := ksfv1.KsflowConfig{}
-	options := ctrl.Options{Scheme: scheme}
+	options := ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     ":9090",
+		HealthProbeBindAddress: ":8081",
+	}
 	if configFile != "" {
 		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ksflowConfig))
 		if err != nil {

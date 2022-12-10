@@ -48,6 +48,9 @@ type ClusterKafkaClusterConfigSpec struct {
 
 	// Prefix assigned to every kafka topic, resulting a topic format matching: "<my-kafkaCluster-topicPrefix>.<my-namespace>.<my-kafkaTopic-name>"
 	TopicPrefix string `json:"topicPrefix"`
+
+	// Kafka Configs for connecting to the cluster.
+	Configs KafkaClusterConfigs `json:"configs"`
 }
 
 // ClusterKafkaClusterConfigStatus defines the observed state of ClusterKafkaClusterConfig

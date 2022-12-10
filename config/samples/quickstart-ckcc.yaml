@@ -1,0 +1,10 @@
+apiVersion: ksflow.io/v1alpha1
+kind: ClusterKafkaClusterConfig
+metadata:
+  name: ksflow-quickstart
+  namespace: ksflow-system
+spec:
+  topicPrefix: io.ksflow.quickstart
+  configs:
+    bootstrapServers: ksflow-quickstart-kafka:9092
+    securityProtocol: PLAINTEXT

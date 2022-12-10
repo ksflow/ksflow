@@ -49,6 +49,25 @@ spec:
             description: ClusterKafkaClusterConfigSpec defines the desired state of
               ClusterKafkaClusterConfig
             properties:
+              configs:
+                description: Kafka Configs for connecting to the cluster.
+                properties:
+                  bootstrapServers:
+                    description: The "bootstrap.servers" kafka config for connecting
+                      to the cluster. For example "host1:port1,host2:port2".
+                    pattern: ^([^,:]+):(\d+)(,([^,:]+):(\d+))*$
+                    type: string
+                  securityProtocol:
+                    description: The "security.protocol" kafka config for connecting
+                      to the cluster, must be "PLAINTEXT" or "SSL".
+                    enum:
+                    - PLAINTEXT
+                    - SSL
+                    type: string
+                required:
+                - bootstrapServers
+                - securityProtocol
+                type: object
               topicPrefix:
                 description: 'Prefix assigned to every kafka topic, resulting a topic
                   format matching: "<my-kafkaCluster-topicPrefix>.<my-namespace>.<my-kafkaTopic-name>"'
@@ -56,6 +75,7 @@ spec:
                 pattern: ^[a-z]([-a-z0-9\.]*[a-z])?$
                 type: string
             required:
+            - configs
             - topicPrefix
             type: object
           status:
