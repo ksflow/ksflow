@@ -3,7 +3,7 @@
 Ensure you are familiar with [Kafka Security](https://kafka.apache.org/documentation/#security).
 
 To secure your Kafka Cluster, ensure that:
-1. `mtls` is enabled on each `ClusterKafkaCluster` defined
+1. `mtls` is enabled on each `ClusterKafkaClusterConfig` defined
 2. Kafka brokers have mTLS enabled for client authentication with proper credentials
 3. Containers running on Kubernetes are using mTLS for their Kafka clients with proper credentials
 4. Ensure your kafka cluster has `allow.everyone.if.no.acl.found` set to `false`  
@@ -42,10 +42,10 @@ The ksflow controller watches for `KafkaACL`s and for each, does the following:
 3. Updates the status of the KafkaACL object to reflect success or failure
 
 Currently, namespaced resources are allowed to define KafkaACLs against topics under certain topic prefixes.
-Specifically, a prefix can be specified in the ClusterKafkaCluster spec which will restrict the topics.
+Specifically, a prefix can be specified in the ClusterKafkaClusterConfig spec which will restrict the topics.
 
-For example, let's say there is a ClusterKafkaCluster specified with prefix `com.example`, and a
-`KafkaTopic` named `my-topic` is defined in namespace `my-namespace` referencing that ClusterKafkaCluster. In this case,
+For example, let's say there is a ClusterKafkaClusterConfig specified with prefix `com.example`, and a
+`KafkaTopic` named `my-topic` is defined in namespace `my-namespace` referencing that ClusterKafkaClusterConfig. In this case,
 the topic that will be created (if successful) is `com.example.my-namespace.my-topic`. The steps are:
 1. The ksflow controller will create a Kubernetes Job in `my-namespace` which is responsible for creating the topic. The Job object is owned by the KafkaTopic.
 2. The ksflow controller will watch the Job and update the status of the KafkaTopic accordingly to reflect success or failure.

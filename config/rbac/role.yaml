@@ -1,0 +1,163 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - ksflow.io
+  resources:
+  - clusterkafkaclusterconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - clusterkafkaclusterconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - clusterkafkaclusterconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaacls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaacls/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaacls/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaadminclientconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaadminclientconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaadminclientconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaconsumerconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaconsumerconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaconsumerconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaproducerconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaproducerconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaproducerconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkatopics
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkatopics/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkatopics/status
+  verbs:
+  - get
+  - patch
+  - update
