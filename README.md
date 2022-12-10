@@ -3,7 +3,9 @@
 
 Ksflow is a tool to simplify processing Kafka topics on Kubernetes.
 
-Concerns such as security, configuration and scaling are standardized for developer's pods in a language-agnostic way.
+Several CRDs are introduced, which a developer can use define all the kafka-related resources their application requires.
+
+Concerns such as security, configuration, and scaling are standardized for developer's pods in a language-agnostic way.
 
 ## Documentation
 - [CRDs](./docs/crds.md)
