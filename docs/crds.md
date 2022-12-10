@@ -2,14 +2,14 @@
 
 Ksflow introduces the following CRDs:
 
-| CRD                         | Short Name | Namespaced | Owns          |
-|-----------------------------|------------|------------|---------------|
+| CRD                               | Short Name | Namespaced | Owns          |
+|-----------------------------------|------------|------------|---------------|
 | `ClusterKafkaClusterConfigConfig` | `ckcc`     | no         |               |
-| `KafkaTopic`                | `kt`       | yes        | topic (kafka) |
-| `KafkaACL`                  | `ka`       | yes        | ACL (kafka)   |
-| `KafkaConsumerConfig`       | `kcc`      | yes        |               |
-| `KafkaProducerConfig`       | `kpc`      | yes        |               |
-| `KafkaAdminClientConfig`    | `kacc`     | yes        |               |
+| `KafkaTopic`                      | `kt`       | yes        | topic (kafka) |
+| `KafkaACL`                        | `ka`       | yes        | ACL (kafka)   |
+| `KafkaConsumerConfig`             | `kcc`      | yes        |               |
+| `KafkaProducerConfig`             | `kpc`      | yes        |               |
+| `KafkaAdminClientConfig`          | `kacc`     | yes        |               |
 
 ### ClusterKafkaClusterConfigConfig
 Ksflow does not manage Kafka brokers, only the things that an application reasonably might need to configure.
