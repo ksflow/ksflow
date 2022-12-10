@@ -19,12 +19,19 @@ for the Kafka provider you are using:
 
 ### Configuring Kubernetes for mTLS
 
-All pods, including the ksflow controller will need credentials to connect to Kafka. There are many ways to
-accomplish this, a few are:
+All pods, including the ksflow controller will need credentials to connect to Kafka. Kafka mTLS uses the client certificate
+DN (i.e. `User:CN=quickstart.confluent.io,OU=TEST,O=Sales,L=PaloAlto,ST=Ca,C=US`) to apply ACLs to. While there are many ways
+to ensure the principal in the KafkaACL matches the DN used by the pod, the recommended way is to use [SPIRE](https://github.com/spiffe/spire)
+with the [spire-controller-manager](https://github.com/spiffe/spire-controller-manager). The controller will allow you
+to map pods to spiffeIDs, which SPIRE will then use to generate a unique DN for the spiffeID. SPIRE integrates with whatever
+CA (i.e. Vault, cert-manager, AWS PCA, etc.) you use to ensure the proper certificate is always available to the pod and kept up-to-date.
 
-* (recommended) [Istio's SPIRE integration](https://istio.io/latest/docs/ops/integrations/spire/) with [spire-controller-manager](https://github.com/spiffe/spire-controller-manager)
-* [Otterize](https://github.com/otterize/spire-integration-operator) with SPIRE
-* [cert-manager](https://github.com/cert-manager/cert-manager) and [reloader](https://github.com/stakater/Reloader)
+To ensure the kafka client is using the latest certificate, there are several options.
+
+* (code) [Java-Spiffe](https://github.com/spiffe/java-spiffe), [Go-Spiffe](https://github.com/spiffe/go-spiffe), etc.
+* (envoy sidecar) [Envoy's SPIRE integration](https://spiffe.io/docs/latest/microservices/envoy/)
+* (service mesh) [Istio's SPIRE integration](https://istio.io/latest/docs/ops/integrations/spire/)
+* (service mesh) [AWS App Mesh's SPIRE integration](https://aws.amazon.com/blogs/containers/using-mtls-with-spiffe-spire-in-app-mesh-on-eks/)
 
 Ultimately configuring mTLS for pods in Kubernetes is not specific to pods talking to Kafka, so the solution
 may vary based on how your Kubernetes cluster is structured. Just ensure that the Principals defined in the ACLs
