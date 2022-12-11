@@ -25,7 +25,7 @@ external Kafka cluster. Notably, it specifies:
 **Important Notes**:
 - Be VERY careful if changing properties, as they will trigger updates in all objects that reference the ClusterKafkaClusterConfig.
 - Setting the securityProtocol to SSL is strongly recommended. See [security.md](./security.md) for details.
-- Take care when setting the topicPrefix (ref: https://kafka.apache.org/documentation/#multitenancy-topic-naming).
+- Take care when selecting the topicPrefix. See [topic-names.md](./topic-names.md) for details.
 
 ### KafkaTopic
 
