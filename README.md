@@ -15,7 +15,7 @@ Concerns such as security, configuration, and scaling are standardized for devel
    * Running Kafka on a separate Kubernetes cluster (i.e. [Strimzi](https://strimzi.io/) or [Confluent for Kubernetes (CFK)](https://docs.confluent.io/operator/current/overview.html))
    
    In such cases, often what is desired is a **lightweight tool focused on developer experience**.
-2. The ecosystem is very friendly to languages that run on the JVM, while **support for other commonly used languages**
+2. The Kafka ecosystem is very friendly to languages that run on the JVM, while **support for other commonly used languages**
 (i.e. Python, Go, Rust) is often less of a focus.
 3. The tools that support language-agnostic stream-processing applications on Kubernetes, such as [Dapr](https://github.com/dapr/dapr) and [Numaflow](https://github.com/numaproj/numaflow),
 come with various tradeoffs. Specifically, they abstract the streaming solution (i.e. kafka, redis streams, jetstream, kinesis, pulsar, etc.)
