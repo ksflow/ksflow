@@ -18,9 +18,10 @@ Concerns such as security, configuration, and scaling are standardized for devel
 2. The Kafka ecosystem is very friendly to languages that run on the JVM, while **support for other commonly used languages**
 (i.e. Python, Go, Rust) is often less of a focus.
 3. The tools that support language-agnostic stream-processing applications on Kubernetes, such as [Dapr](https://github.com/dapr/dapr) and [Numaflow](https://github.com/numaproj/numaflow),
-come with various tradeoffs. Specifically, they abstract the streaming solution (i.e. kafka, redis streams, jetstream, kinesis, pulsar, etc.)
-by injecting themselves into the traffic and providing an alternate developer API. For teams **focused on Kafka**, this
-abstraction may introduce limitations and/or require significant refactoring without providing sufficient additional value.
+provide significant value, but come with various tradeoffs. Specifically, they abstract the event store
+(i.e. kafka, redis streams, jetstream, kinesis, pulsar, etc.) by injecting themselves into the traffic and providing an
+alternate developer API. For teams **solely focused on Kafka** the provided abstraction often introduces limitations
+and/or requires significant refactoring to existing applications without providing sufficient additional value.
 
 ## Documentation
 - [CRDs](./docs/crds.md)

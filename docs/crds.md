@@ -22,10 +22,10 @@ external Kafka cluster. Notably, it specifies:
 | `.spec.configs.bootstrapServers` | `k1.example.com:9092,k2.example.com:9092` |                                                                                                                             |
 | `.spec.configs.securityProtocol` | `SSL`                                     | `PLAINTEXT`,`SSL`                                                                                                           |
 
-Notes:
-- **Be VERY careful if changing properties, as they will trigger updates in all objects that reference the ClusterKafkaClusterConfig.**
-- **Setting the securityProtocol to SSL is strongly recommended. See [security.md](./security.md) for details.**
-- A kubernetes finalizer is used to prevent deletion of the ClusterKafkaClusterConfig until all references are removed.
+**Important Notes**:
+- Be VERY careful if changing properties, as they will trigger updates in all objects that reference the ClusterKafkaClusterConfig.
+- Setting the securityProtocol to SSL is strongly recommended. See [security.md](./security.md) for details.
+- Take care when setting the topicPrefix (ref: https://kafka.apache.org/documentation/#multitenancy-topic-naming).
 
 ### KafkaTopic
 
