@@ -38,7 +38,7 @@ metadata:
 spec:
   topicPrefix: mobility
   configs:
-    bootstrapServers: b-1.mycluster.123z8u.c2.kafka.us-east-1.amazonaws.com:9094,b-2.mycluster.123z8u.c2.kafka.us-east-1.amazonaws.com:9094
+    bootstrap.servers: b-1.mycluster.123z8u.c2.kafka.us-east-1.amazonaws.com:9094,b-2.mycluster.123z8u.c2.kafka.us-east-1.amazonaws.com:9094
   ...
 ---
 apiVersion: ksflow.io/v1alpha1

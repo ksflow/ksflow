@@ -38,10 +38,10 @@ type KafkaConfigs struct {
 	// +kubebuilder:validation:Pattern=`^([^,:]+):(\d+)(,([^,:]+):(\d+))*$`
 
 	// The "bootstrap.servers" kafka config for connecting to the cluster. For example "host1:port1,host2:port2".
-	BootstrapServers string `json:"bootstrapServers"`
+	BootstrapServers string `json:"bootstrap.servers"`
 
 	// The "security.protocol" kafka config for connecting to the cluster, must be "PLAINTEXT" or "SSL".
-	SecurityProtocol KafkaSecurityProtocol `json:"securityProtocol"`
+	SecurityProtocol KafkaSecurityProtocol `json:"security.protocol"`
 }
 
 // ClusterKafkaConfigSpec defines the desired state of ClusterKafkaConfig
@@ -80,7 +80,7 @@ const (
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster,shortName=ckc
 //+kubebuilder:printcolumn:name="Prefix",type=string,JSONPath=`.spec.topicPrefix`
-//+kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.configs.securityProtocol`
+//+kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.configs.security\.protocol`
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`

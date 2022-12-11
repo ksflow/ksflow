@@ -5,5 +5,5 @@ metadata:
 spec:
   topicPrefix: io.ksflow.quickstart
   configs:
-    bootstrapServers: ksflow-quickstart-kafka:9092
-    securityProtocol: PLAINTEXT
+    bootstrap.servers: ksflow-quickstart-kafka:9092
+    security.protocol: PLAINTEXT

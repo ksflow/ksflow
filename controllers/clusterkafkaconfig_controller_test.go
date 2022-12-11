@@ -42,7 +42,7 @@ var _ = Describe("ClusterKafkaConfig controller", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When updating ClusterKafkaConfig bootstrapServers", func() {
+	Context("When updating ClusterKafkaConfig bootstrap.servers", func() {
 		It("Should update the ClusterKafkaConfig connection Status", func() {
 			By("By creating a new ClusterKafkaConfig")
 			ctx := context.Background()
@@ -88,7 +88,7 @@ var _ = Describe("ClusterKafkaConfig controller", func() {
 			By("By starting the Kafka broker")
 
 			// add label to trigger reconcile
-			patchStr := fmt.Sprintf(`{"spec": {"configs": {"bootstrapServers": "%s"}}}`, strings.Join(testKafkaContainerWrapper.GetAddresses(), ","))
+			patchStr := fmt.Sprintf(`{"spec": {"configs": {"bootstrap.servers": "%s"}}}`, strings.Join(testKafkaContainerWrapper.GetAddresses(), ","))
 			Expect(testK8sClient.Patch(ctx, ckc, crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
 
 			By("By checking that the ClusterKafkaConfig has an Available phase")

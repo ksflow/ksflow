@@ -21,7 +21,7 @@ spec:
     - jsonPath: .spec.topicPrefix
       name: Prefix
       type: string
-    - jsonPath: .spec.configs.securityProtocol
+    - jsonPath: .spec.configs.security\.protocol
       name: Protocol
       type: string
     - jsonPath: .status.phase
@@ -52,18 +52,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClusterKafkaConfigSpec defines the desired state of
-              ClusterKafkaConfig
+            description: ClusterKafkaConfigSpec defines the desired state of ClusterKafkaConfig
             properties:
               configs:
                 description: Kafka Configs for connecting to the cluster.
                 properties:
-                  bootstrapServers:
+                  bootstrap.servers:
                     description: The "bootstrap.servers" kafka config for connecting
                       to the cluster. For example "host1:port1,host2:port2".
                     pattern: ^([^,:]+):(\d+)(,([^,:]+):(\d+))*$
                     type: string
-                  securityProtocol:
+                  security.protocol:
                     description: The "security.protocol" kafka config for connecting
                       to the cluster, must be "PLAINTEXT" or "SSL".
                     enum:
@@ -71,8 +70,8 @@ spec:
                     - SSL
                     type: string
                 required:
-                - bootstrapServers
-                - securityProtocol
+                - bootstrap.servers
+                - security.protocol
                 type: object
               topicPrefix:
                 description: 'Prefix assigned to every kafka topic, resulting a topic
@@ -85,8 +84,7 @@ spec:
             - topicPrefix
             type: object
           status:
-            description: ClusterKafkaConfigStatus defines the observed state
-              of ClusterKafkaConfig
+            description: ClusterKafkaConfigStatus defines the observed state of ClusterKafkaConfig
             properties:
               lastUpdated:
                 format: date-time
@@ -94,8 +92,7 @@ spec:
               message:
                 type: string
               phase:
-                description: ClusterKafkaConfigPhase defines the phase of the
-                  ClusterKafkaConfig
+                description: ClusterKafkaConfigPhase defines the phase of the ClusterKafkaConfig
                 enum:
                 - ""
                 - Available
