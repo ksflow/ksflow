@@ -27,3 +27,5 @@ and/or requires significant refactoring to existing applications without providi
 - [CRDs](./docs/crds.md)
 - [Quick Start](./docs/quick-start.md)
 - [Install](./docs/install.md)
+- [Security](./docs/security.md)
+- [Topic Names](./docs/topic-names.md)
