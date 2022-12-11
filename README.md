@@ -10,10 +10,11 @@ Concerns such as security, configuration, and scaling are standardized for devel
 ## Motivation
 
 1. There are many situations where Kafka runs external to the Kubernetes cluster where you are processing data.
-In such cases, often what is desired is a **lightweight tool focused on developer experience**.
    * Using a managed Kafka (i.e. [AWS MSK](https://aws.amazon.com/msk/), [Confluent Cloud](https://www.confluent.io/confluent-cloud/))
    * Running your own Kafka outside of Kubernetes (i.e. on VMs)
    * Running Kafka on a separate Kubernetes cluster (i.e. [Strimzi](https://strimzi.io/) or [Confluent for Kubernetes (CFK)](https://docs.confluent.io/operator/current/overview.html))
+   
+   In such cases, often what is desired is a **lightweight tool focused on developer experience**.
 2. The ecosystem is very friendly to languages that run on the JVM, while **support for other commonly used languages**
 (i.e. Python, Go, Rust) is often less of a focus.
 3. The tools that support language-agnostic stream-processing applications on Kubernetes, such as [Dapr](https://github.com/dapr/dapr) and [Numaflow](https://github.com/numaproj/numaflow),
