@@ -11,13 +11,17 @@
 # create a new namespace and switch to it
 kubectl create ns ksflow-system
 kubens ksflow-system
+
 # install ksflow
 helm repo add https://ksflow.github.io/ksflow-helm
 helm install ksflow ksflow/ksflow
+
 # install kafka
 kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-kafka.yaml
+
 # configure ksflow to know about kafka
 kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-ckcc.yaml
+
 # verify controller can connect to Kafka
 kubectl get ckcc # STATUS should show as "Available"
 ```
