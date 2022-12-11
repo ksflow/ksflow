@@ -9,7 +9,7 @@ Kafka provides guidance for [multi-tenancy topic naming](https://kafka.apache.or
 
 ### Kubernetes Multi-tenancy
 
-Kubernetes uses namespaces to organize workloads, which are useful for authorization.
+Kubernetes uses namespaces to organize workloads, which is useful for authorization.
 
 Kubernetes provides documentation on [multi-tenancy](https://kubernetes.io/docs/concepts/security/multi-tenancy/).
 
@@ -53,4 +53,4 @@ spec:
 
 This is just one example, configuration will depend on your use-case.
 
-For specifics on how authorization works in ksflow, see [security.md](./security.md).
+For specifics on how topic names are used for authorization in ksflow, see [security.md](./security.md).
