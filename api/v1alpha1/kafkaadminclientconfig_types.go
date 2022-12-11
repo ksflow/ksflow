@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 The Ksflow Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,8 +38,8 @@ type KafkaAdminClientConfigStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // KafkaAdminClientConfig is the Schema for the kafkaadminclientconfigs API
 type KafkaAdminClientConfig struct {
@@ -50,7 +50,7 @@ type KafkaAdminClientConfig struct {
 	Status KafkaAdminClientConfigStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // KafkaAdminClientConfigList contains a list of KafkaAdminClientConfig
 type KafkaAdminClientConfigList struct {

@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 The Ksflow Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,9 +35,9 @@ type ClusterKafkaConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/finalizers,verbs=update
+// +kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop for the request
 func (r *ClusterKafkaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

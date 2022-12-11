@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 The Ksflow Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ const (
 )
 
 // KafkaConfigs defines the Kafka configs for connecting to the Kafka Cluster
-// configs match what kafka clients use to connect, however they are camelCase instead of period-separated.
+// configs match what kafka clients use to connect.
 type KafkaConfigs struct {
 
 	// +kubebuilder:validation:Pattern=`^([^,:]+):(\d+)(,([^,:]+):(\d+))*$`
@@ -64,7 +64,7 @@ type ClusterKafkaConfigStatus struct {
 	LastUpdated metav1.Time             `json:"lastUpdated,omitempty"`
 }
 
-//+kubebuilder:validation:Enum="";Available;Failed;Deleting
+// +kubebuilder:validation:Enum="";Available;Failed;Deleting
 
 // ClusterKafkaConfigPhase defines the phase of the ClusterKafkaConfig
 type ClusterKafkaConfigPhase string
@@ -76,14 +76,14 @@ const (
 	ClusterKafkaConfigPhaseDeleting  ClusterKafkaConfigPhase = "Deleting"
 )
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster,shortName=ckc
-//+kubebuilder:printcolumn:name="Prefix",type=string,JSONPath=`.spec.topicPrefix`
-//+kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.configs.security\.protocol`
-//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,shortName=ckc
+// +kubebuilder:printcolumn:name="Prefix",type=string,JSONPath=`.spec.topicPrefix`
+// +kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.configs.security\.protocol`
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
 // ClusterKafkaConfig is the Schema for the clusterkafkaconfigs API
 type ClusterKafkaConfig struct {
@@ -94,7 +94,7 @@ type ClusterKafkaConfig struct {
 	Status ClusterKafkaConfigStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // ClusterKafkaConfigList contains a list of ClusterKafkaConfig
 type ClusterKafkaConfigList struct {

@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 The Ksflow Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,26 +20,35 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // KafkaTopicSpec defines the desired state of KafkaTopic
 type KafkaTopicSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// KafkaConfigRef is a reference to the KafkaConfig or ClusterKafkaConfig that this topic belongs to
+	KafkaConfigRef ObjectRef `json:"kafkaConfigRef,omitempty"`
 
-	// Foo is an example field of KafkaTopic. Edit kafkatopic_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+
+	// Partitions is the number of partitions in the topic.
+	Partitions int32 `json:"partitions"`
+
+	// +kubebuilder:validation:Minimum=1
+
+	// ReplicationFactor is the number of replicas for each of the topic's partitions.
+	ReplicationFactor int16 `json:"replicationFactor"`
+
+	// Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
+	Configs *KafkaTopicConfigs `json:"configs,omitempty"`
 }
 
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=kt
+// +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.spec.partitions`
+// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicationFactor`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
 // KafkaTopic is the Schema for the kafkatopics API
 type KafkaTopic struct {
@@ -50,7 +59,7 @@ type KafkaTopic struct {
 	Status KafkaTopicStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // KafkaTopicList contains a list of KafkaTopic
 type KafkaTopicList struct {

@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 The Ksflow Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,8 +38,8 @@ type KafkaProducerConfigStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // KafkaProducerConfig is the Schema for the kafkaproducerconfigs API
 type KafkaProducerConfig struct {
@@ -50,7 +50,7 @@ type KafkaProducerConfig struct {
 	Status KafkaProducerConfigStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // KafkaProducerConfigList contains a list of KafkaProducerConfig
 type KafkaProducerConfigList struct {

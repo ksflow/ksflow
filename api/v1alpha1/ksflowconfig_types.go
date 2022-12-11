@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 The Ksflow Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	cfg "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // KsflowConfig is the Schema for the ksflowconfigs API
 type KsflowConfig struct {
