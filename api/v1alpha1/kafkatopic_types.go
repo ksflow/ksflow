@@ -37,6 +37,10 @@ type KafkaTopicSpec struct {
 
 	// Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
 	Configs *KafkaTopicConfigs `json:"configs,omitempty"`
+
+	// JobTemplate is used to customize the Job that runs to create/modify/delete the topic
+	// +optional
+	JobTemplate *JobTemplate `json:"jobTemplate,omitempty"`
 }
 
 // KafkaTopicStatus defines the observed state of KafkaTopic

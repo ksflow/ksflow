@@ -21,7 +21,7 @@ type KafkaTopicConfigs struct {
 	// CleanupPolicy designates the retention policy to use on log segments.
 	// ref: https://kafka.apache.org/documentation/#topicconfigs_cleanup.policy
 	// +optional
-	CleanupPolicy *[]string `json:"cleanup.policy,omitempty"`
+	CleanupPolicy *string `json:"cleanup.policy,omitempty"`
 
 	// CompressionType is the final compression type for a given topic.
 	// ref: https://kafka.apache.org/documentation/#topicconfigs_compression.type
@@ -51,7 +51,7 @@ type KafkaTopicConfigs struct {
 	// FollowerReplicationThrottledReplicas is a list of replicas for which log replication should be throttled on the follower side.
 	// ref: https://kafka.apache.org/documentation/#topicconfigs_follower.replication.throttled.replicas
 	// +optional
-	FollowerReplicationThrottledReplicas *[]string `json:"follower.replication.throttled.replicas,omitempty"`
+	FollowerReplicationThrottledReplicas *string `json:"follower.replication.throttled.replicas,omitempty"`
 
 	// IndexIntervalBytes controls how frequently Kafka adds an index entry to its offset index.
 	// ref: https://kafka.apache.org/documentation/#topicconfigs_index.interval.bytes
@@ -61,7 +61,7 @@ type KafkaTopicConfigs struct {
 	// LeaderReplicationThrottledReplicas is a list of replicas for which log replication should be throttled on the leader side.
 	// ref: https://kafka.apache.org/documentation/#topicconfigs_leader.replication.throttled.replicas
 	// +optional
-	LeaderReplicationThrottledReplicas *[]string `json:"leader.replication.throttled.replicas,omitempty"`
+	LeaderReplicationThrottledReplicas *string `json:"leader.replication.throttled.replicas,omitempty"`
 
 	// MaxCompactionLagMs is the maximum time a message will remain ineligible for compaction in the log.
 	// ref: https://kafka.apache.org/documentation/#topicconfigs_max.compaction.lag.ms
