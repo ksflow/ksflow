@@ -7,7 +7,7 @@
 * [kubectx](https://github.com/ahmetb/kubectx)
 
 #### Install
-```bash
+```shell
 # create a new namespace and switch to it
 kubectl create ns ksflow-system
 kubens ksflow-system
@@ -25,12 +25,12 @@ kubectl get ckcc # STATUS should show as "Available"
 #### Create a Topic
 TODO!!!!!!!!!!!!!!!!!!!!!!!
 1. Verify the topic was created
-   ```bash
+   ```shell
    kubectl exec deploy/ksflow-quickstart-kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
    ```
 
 #### Uninstall
-```bash
+```shell
 kubens default
 kubectl delete ns ksflow-system
 ```
