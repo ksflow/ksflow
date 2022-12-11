@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 
+	"github.com/twmb/franz-go/pkg/kgo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,17 +39,44 @@ type ClusterKafkaClusterConfigReconciler struct {
 //+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaclusterconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaclusterconfigs/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
+// Reconcile is part of the main kubernetes reconciliation loop for the request
 func (r *ClusterKafkaClusterConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
+	// Get Object
 	var ckcc ksfv1.ClusterKafkaClusterConfig
 	if err := r.Get(ctx, req.NamespacedName, &ckcc); err != nil {
 		logger.Error(err, "unable to get ClusterKafkaClusterConfig")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger.V(1).Info("reconciled ClusterKafkaClusterConfig")
+	// Create kafka client
+	kafkaClient, err := kgo.NewClient(
+		kgo.SeedBrokers(ckcc.BootstrapServers()...),
+	)
+	if err != nil {
+		logger.Error(err, "unable to create kafka client")
+		return ctrl.Result{}, err
+	}
+	defer kafkaClient.Close()
+
+	// Check connection to brokers
+	connErr := kafkaClient.Ping(ctx)
+	if connErr != nil {
+		ckcc.Status.Phase = ksfv1.ClusterKafkaClusterConfigPhaseFailed
+		ckcc.Status.Message = "unable to request api versions from brokers"
+	} else {
+		ckcc.Status.Phase = ksfv1.ClusterKafkaClusterConfigPhaseAvailable
+		ckcc.Status.Message = ""
+	}
+	ckcc.Status.LastUpdated = metav1.Now()
+
+	// Update status
+	if err = r.Status().Update(ctx, &ckcc); err != nil {
+		logger.Error(err, "unable to update ClusterKafkaClusterConfig status")
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 

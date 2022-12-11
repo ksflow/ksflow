@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -103,4 +105,9 @@ type ClusterKafkaClusterConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&ClusterKafkaClusterConfig{}, &ClusterKafkaClusterConfigList{})
+}
+
+// BootstrapServers returns the list of bootstrap servers for the Kafka cluster
+func (c *ClusterKafkaClusterConfig) BootstrapServers() []string {
+	return strings.Split(c.Spec.Configs.BootstrapServers, ",")
 }
