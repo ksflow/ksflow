@@ -21,9 +21,6 @@ come with various tradeoffs. Specifically, they abstract the streaming solution 
 by injecting themselves into the traffic and providing an alternate developer API. For teams **focused on Kafka**, this
 abstraction may introduce limitations and/or require significant refactoring without providing sufficient additional value.
 
-Ksflow attempts to address these by providing a lightweight, secure, language-agnostic, kubernetes-native, kafka-native
-tool focused on the developer.
-
 ## Documentation
 - [CRDs](./docs/crds.md)
 - [Quick Start](./docs/quick-start.md)
