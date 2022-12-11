@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	ksflowv1alpha1 "github.com/ksflow/ksflow/api/v1alpha1"
+	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
 // KafkaProducerConfigReconciler reconciles a KafkaProducerConfig object
@@ -57,6 +57,6 @@ func (r *KafkaProducerConfigReconciler) Reconcile(ctx context.Context, req ctrl.
 // SetupWithManager sets up the controller with the Manager.
 func (r *KafkaProducerConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ksflowv1alpha1.KafkaProducerConfig{}).
+		For(&ksfv1.KafkaProducerConfig{}).
 		Complete(r)
 }

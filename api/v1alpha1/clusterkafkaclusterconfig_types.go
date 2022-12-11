@@ -29,6 +29,8 @@ const (
 	KafkaSecurityProtocolSSL       KafkaSecurityProtocol = "SSL"
 )
 
+// KafkaClusterConfigs defines the Kafka configs for connecting to the Kafka Cluster
+// configs match what kafka clients use to connect, however they are camelCase instead of period-separated.
 type KafkaClusterConfigs struct {
 
 	// +kubebuilder:validation:Pattern=`^([^,:]+):(\d+)(,([^,:]+):(\d+))*$`
@@ -55,13 +57,30 @@ type ClusterKafkaClusterConfigSpec struct {
 
 // ClusterKafkaClusterConfigStatus defines the observed state of ClusterKafkaClusterConfig
 type ClusterKafkaClusterConfigStatus struct {
+	Phase       ClusterKafkaClusterConfigPhase `json:"phase,omitempty"`
+	Message     string                         `json:"message,omitempty"`
+	LastUpdated metav1.Time                    `json:"lastUpdated,omitempty"`
 }
+
+//+kubebuilder:validation:Enum="";Available;Failed;Deleting
+
+// ClusterKafkaClusterConfigPhase defines the phase of the ClusterKafkaClusterConfig
+type ClusterKafkaClusterConfigPhase string
+
+const (
+	ClusterKafkaClusterConfigPhaseUnknown   ClusterKafkaClusterConfigPhase = ""
+	ClusterKafkaClusterConfigPhaseAvailable ClusterKafkaClusterConfigPhase = "Available"
+	ClusterKafkaClusterConfigPhaseFailed    ClusterKafkaClusterConfigPhase = "Failed"
+	ClusterKafkaClusterConfigPhaseDeleting  ClusterKafkaClusterConfigPhase = "Deleting"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster,shortName=ckcc
-//+kubebuilder:printcolumn:name="Topic Prefix",type=string,JSONPath=`.spec.topicPrefix`
-//+kubebuilder:printcolumn:name="Security Protocol",type=string,JSONPath=`.spec.securityProtocol`
+//+kubebuilder:printcolumn:name="Prefix",type=string,JSONPath=`.spec.topicPrefix`
+//+kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.configs.securityProtocol`
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
+//+kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
 // ClusterKafkaClusterConfig is the Schema for the clusterkafkaclusterconfigs API

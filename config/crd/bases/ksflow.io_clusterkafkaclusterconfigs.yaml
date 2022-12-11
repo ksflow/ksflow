@@ -19,10 +19,16 @@ spec:
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.topicPrefix
-      name: Topic Prefix
+      name: Prefix
       type: string
-    - jsonPath: .spec.securityProtocol
-      name: Security Protocol
+    - jsonPath: .spec.configs.securityProtocol
+      name: Protocol
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .status.message
+      name: Message
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -81,6 +87,21 @@ spec:
           status:
             description: ClusterKafkaClusterConfigStatus defines the observed state
               of ClusterKafkaClusterConfig
+            properties:
+              lastUpdated:
+                format: date-time
+                type: string
+              message:
+                type: string
+              phase:
+                description: ClusterKafkaClusterConfigPhase defines the phase of the
+                  ClusterKafkaClusterConfig
+                enum:
+                - ""
+                - Available
+                - Failed
+                - Deleting
+                type: string
             type: object
         type: object
     served: true

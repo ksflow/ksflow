@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	ksflowv1alpha1 "github.com/ksflow/ksflow/api/v1alpha1"
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"github.com/ksflow/ksflow/controllers"
 	//+kubebuilder:scaffold:imports
@@ -46,7 +45,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(ksfv1.AddToScheme(scheme))
-	utilruntime.Must(ksflowv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

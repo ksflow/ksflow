@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	ksflowv1alpha1 "github.com/ksflow/ksflow/api/v1alpha1"
+	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
 // KafkaACLReconciler reconciles a KafkaACL object
@@ -57,6 +57,6 @@ func (r *KafkaACLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 // SetupWithManager sets up the controller with the Manager.
 func (r *KafkaACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ksflowv1alpha1.KafkaACL{}).
+		For(&ksfv1.KafkaACL{}).
 		Complete(r)
 }
