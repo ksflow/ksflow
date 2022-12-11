@@ -31,9 +31,9 @@ const (
 	KafkaSecurityProtocolSSL       KafkaSecurityProtocol = "SSL"
 )
 
-// KafkaClusterConfigs defines the Kafka configs for connecting to the Kafka Cluster
+// KafkaConfigs defines the Kafka configs for connecting to the Kafka Cluster
 // configs match what kafka clients use to connect, however they are camelCase instead of period-separated.
-type KafkaClusterConfigs struct {
+type KafkaConfigs struct {
 
 	// +kubebuilder:validation:Pattern=`^([^,:]+):(\d+)(,([^,:]+):(\d+))*$`
 
@@ -44,8 +44,8 @@ type KafkaClusterConfigs struct {
 	SecurityProtocol KafkaSecurityProtocol `json:"securityProtocol"`
 }
 
-// ClusterKafkaClusterConfigSpec defines the desired state of ClusterKafkaClusterConfig
-type ClusterKafkaClusterConfigSpec struct {
+// ClusterKafkaConfigSpec defines the desired state of ClusterKafkaConfig
+type ClusterKafkaConfigSpec struct {
 
 	// +kubebuilder:validation:MaxLength=125
 	// +kubebuilder:validation:Pattern=`^[a-z]([-a-z0-9\.]*[a-z])?$`
@@ -54,60 +54,60 @@ type ClusterKafkaClusterConfigSpec struct {
 	TopicPrefix string `json:"topicPrefix"`
 
 	// Kafka Configs for connecting to the cluster.
-	Configs KafkaClusterConfigs `json:"configs"`
+	Configs KafkaConfigs `json:"configs"`
 }
 
-// ClusterKafkaClusterConfigStatus defines the observed state of ClusterKafkaClusterConfig
-type ClusterKafkaClusterConfigStatus struct {
-	Phase       ClusterKafkaClusterConfigPhase `json:"phase,omitempty"`
-	Message     string                         `json:"message,omitempty"`
-	LastUpdated metav1.Time                    `json:"lastUpdated,omitempty"`
+// ClusterKafkaConfigStatus defines the observed state of ClusterKafkaConfig
+type ClusterKafkaConfigStatus struct {
+	Phase       ClusterKafkaConfigPhase `json:"phase,omitempty"`
+	Message     string                  `json:"message,omitempty"`
+	LastUpdated metav1.Time             `json:"lastUpdated,omitempty"`
 }
 
 //+kubebuilder:validation:Enum="";Available;Failed;Deleting
 
-// ClusterKafkaClusterConfigPhase defines the phase of the ClusterKafkaClusterConfig
-type ClusterKafkaClusterConfigPhase string
+// ClusterKafkaConfigPhase defines the phase of the ClusterKafkaConfig
+type ClusterKafkaConfigPhase string
 
 const (
-	ClusterKafkaClusterConfigPhaseUnknown   ClusterKafkaClusterConfigPhase = ""
-	ClusterKafkaClusterConfigPhaseAvailable ClusterKafkaClusterConfigPhase = "Available"
-	ClusterKafkaClusterConfigPhaseFailed    ClusterKafkaClusterConfigPhase = "Failed"
-	ClusterKafkaClusterConfigPhaseDeleting  ClusterKafkaClusterConfigPhase = "Deleting"
+	ClusterKafkaConfigPhaseUnknown   ClusterKafkaConfigPhase = ""
+	ClusterKafkaConfigPhaseAvailable ClusterKafkaConfigPhase = "Available"
+	ClusterKafkaConfigPhaseFailed    ClusterKafkaConfigPhase = "Failed"
+	ClusterKafkaConfigPhaseDeleting  ClusterKafkaConfigPhase = "Deleting"
 )
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster,shortName=ckcc
+//+kubebuilder:resource:scope=Cluster,shortName=ckc
 //+kubebuilder:printcolumn:name="Prefix",type=string,JSONPath=`.spec.topicPrefix`
 //+kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.configs.securityProtocol`
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
-// ClusterKafkaClusterConfig is the Schema for the clusterkafkaclusterconfigs API
-type ClusterKafkaClusterConfig struct {
+// ClusterKafkaConfig is the Schema for the clusterkafkaconfigs API
+type ClusterKafkaConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterKafkaClusterConfigSpec   `json:"spec,omitempty"`
-	Status ClusterKafkaClusterConfigStatus `json:"status,omitempty"`
+	Spec   ClusterKafkaConfigSpec   `json:"spec,omitempty"`
+	Status ClusterKafkaConfigStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// ClusterKafkaClusterConfigList contains a list of ClusterKafkaClusterConfig
-type ClusterKafkaClusterConfigList struct {
+// ClusterKafkaConfigList contains a list of ClusterKafkaConfig
+type ClusterKafkaConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterKafkaClusterConfig `json:"items"`
+	Items           []ClusterKafkaConfig `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ClusterKafkaClusterConfig{}, &ClusterKafkaClusterConfigList{})
+	SchemeBuilder.Register(&ClusterKafkaConfig{}, &ClusterKafkaConfigList{})
 }
 
 // BootstrapServers returns the list of bootstrap servers for the Kafka cluster
-func (c *ClusterKafkaClusterConfig) BootstrapServers() []string {
+func (c *ClusterKafkaConfig) BootstrapServers() []string {
 	return strings.Split(c.Spec.Configs.BootstrapServers, ",")
 }

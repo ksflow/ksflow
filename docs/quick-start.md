@@ -20,10 +20,10 @@ helm install ksflow ksflow/ksflow
 kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-kafka.yaml
 
 # configure ksflow to know about kafka
-kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-ckcc.yaml
+kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-ckc.yaml
 
 # verify controller can connect to Kafka
-kubectl get ckcc # STATUS should show as "Available"
+kubectl get ckc # STATUS should show as "Available"
 ```
 
 #### Create a Topic

@@ -29,30 +29,30 @@ import (
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
-// ClusterKafkaClusterConfigReconciler reconciles a ClusterKafkaClusterConfig object
-type ClusterKafkaClusterConfigReconciler struct {
+// ClusterKafkaConfigReconciler reconciles a ClusterKafkaConfig object
+type ClusterKafkaConfigReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaclusterconfigs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaclusterconfigs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaclusterconfigs/finalizers,verbs=update
+//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop for the request
-func (r *ClusterKafkaClusterConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ClusterKafkaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	// Get Object
-	var ckcc ksfv1.ClusterKafkaClusterConfig
-	if err := r.Get(ctx, req.NamespacedName, &ckcc); err != nil {
-		logger.Error(err, "unable to get ClusterKafkaClusterConfig")
+	var ckc ksfv1.ClusterKafkaConfig
+	if err := r.Get(ctx, req.NamespacedName, &ckc); err != nil {
+		logger.Error(err, "unable to get ClusterKafkaConfig")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Create kafka client
 	kafkaClient, err := kgo.NewClient(
-		kgo.SeedBrokers(ckcc.BootstrapServers()...),
+		kgo.SeedBrokers(ckc.BootstrapServers()...),
 	)
 	if err != nil {
 		logger.Error(err, "unable to create kafka client")
@@ -63,17 +63,17 @@ func (r *ClusterKafkaClusterConfigReconciler) Reconcile(ctx context.Context, req
 	// Check connection to brokers
 	connErr := kafkaClient.Ping(ctx)
 	if connErr != nil {
-		ckcc.Status.Phase = ksfv1.ClusterKafkaClusterConfigPhaseFailed
-		ckcc.Status.Message = "unable to request api versions from brokers"
+		ckc.Status.Phase = ksfv1.ClusterKafkaConfigPhaseFailed
+		ckc.Status.Message = "unable to request api versions from brokers"
 	} else {
-		ckcc.Status.Phase = ksfv1.ClusterKafkaClusterConfigPhaseAvailable
-		ckcc.Status.Message = ""
+		ckc.Status.Phase = ksfv1.ClusterKafkaConfigPhaseAvailable
+		ckc.Status.Message = ""
 	}
-	ckcc.Status.LastUpdated = metav1.Now()
+	ckc.Status.LastUpdated = metav1.Now()
 
 	// Update status
-	if err = r.Status().Update(ctx, &ckcc); err != nil {
-		logger.Error(err, "unable to update ClusterKafkaClusterConfig status")
+	if err = r.Status().Update(ctx, &ckc); err != nil {
+		logger.Error(err, "unable to update ClusterKafkaConfig status")
 		return ctrl.Result{}, err
 	}
 
@@ -81,8 +81,8 @@ func (r *ClusterKafkaClusterConfigReconciler) Reconcile(ctx context.Context, req
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterKafkaClusterConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ClusterKafkaConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ksfv1.ClusterKafkaClusterConfig{}).
+		For(&ksfv1.ClusterKafkaConfig{}).
 		Complete(r)
 }

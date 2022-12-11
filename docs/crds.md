@@ -4,16 +4,16 @@ Ksflow introduces the following CRDs:
 
 | CRD                         | Short Name | Namespaced | Owns          |
 |-----------------------------|------------|------------|---------------|
-| `ClusterKafkaClusterConfig` | `ckcc`     | no         |               |
+| `ClusterKafkaConfig` | `ckc`     | no         |               |
 | `KafkaTopic`                | `kt`       | yes        | topic (kafka) |
 | `KafkaACL`                  | `ka`       | yes        | ACL (kafka)   |
 | `KafkaConsumerConfig`       | `kcc`      | yes        |               |
 | `KafkaProducerConfig`       | `kpc`      | yes        |               |
 | `KafkaAdminClientConfig`    | `kacc`     | yes        |               |
 
-### ClusterKafkaClusterConfig
+### ClusterKafkaConfig
 Ksflow does not manage Kafka brokers, only the things that an application reasonably might need to configure.
-Because of this, a ClusterKafkaClusterConfig only defines the properties required for an application to connect to an
+Because of this, a ClusterKafkaConfig only defines the properties required for an application to connect to an
 external Kafka cluster. Notably, it specifies:
 
 | Name                             | Example                                   | Values                                                                                                                      |
@@ -23,7 +23,7 @@ external Kafka cluster. Notably, it specifies:
 | `.spec.configs.securityProtocol` | `SSL`                                     | `PLAINTEXT`,`SSL`                                                                                                           |
 
 **Important Notes**:
-- Be VERY careful if changing properties, as they will trigger updates in all objects that reference the ClusterKafkaClusterConfig.
+- Be VERY careful if changing properties, as they will trigger updates in all objects that reference the ClusterKafkaConfig.
 - Setting the securityProtocol to SSL is strongly recommended. See [security.md](./security.md) for details.
 - Take care when selecting the topicPrefix. See [topic-names.md](./topic-names.md) for details.
 

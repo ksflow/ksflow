@@ -5,16 +5,16 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: clusterkafkaclusterconfigs.ksflow.io
+  name: clusterkafkaconfigs.ksflow.io
 spec:
   group: ksflow.io
   names:
-    kind: ClusterKafkaClusterConfig
-    listKind: ClusterKafkaClusterConfigList
-    plural: clusterkafkaclusterconfigs
+    kind: ClusterKafkaConfig
+    listKind: ClusterKafkaConfigList
+    plural: clusterkafkaconfigs
     shortNames:
-    - ckcc
-    singular: clusterkafkaclusterconfig
+    - ckc
+    singular: clusterkafkaconfig
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -36,7 +36,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterKafkaClusterConfig is the Schema for the clusterkafkaclusterconfigs
+        description: ClusterKafkaConfig is the Schema for the clusterkafkaconfigs
           API
         properties:
           apiVersion:
@@ -52,8 +52,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClusterKafkaClusterConfigSpec defines the desired state of
-              ClusterKafkaClusterConfig
+            description: ClusterKafkaConfigSpec defines the desired state of
+              ClusterKafkaConfig
             properties:
               configs:
                 description: Kafka Configs for connecting to the cluster.
@@ -85,8 +85,8 @@ spec:
             - topicPrefix
             type: object
           status:
-            description: ClusterKafkaClusterConfigStatus defines the observed state
-              of ClusterKafkaClusterConfig
+            description: ClusterKafkaConfigStatus defines the observed state
+              of ClusterKafkaConfig
             properties:
               lastUpdated:
                 format: date-time
@@ -94,8 +94,8 @@ spec:
               message:
                 type: string
               phase:
-                description: ClusterKafkaClusterConfigPhase defines the phase of the
-                  ClusterKafkaClusterConfig
+                description: ClusterKafkaConfigPhase defines the phase of the
+                  ClusterKafkaConfig
                 enum:
                 - ""
                 - Available

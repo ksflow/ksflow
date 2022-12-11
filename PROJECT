@@ -19,7 +19,7 @@ resources:
   controller: true
   domain: io
   group: ksflow
-  kind: ClusterKafkaClusterConfig
+  kind: ClusterKafkaConfig
   path: github.com/ksflow/ksflow/api/v1alpha1
   version: v1alpha1
 - api:

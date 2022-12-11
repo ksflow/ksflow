@@ -1,5 +1,5 @@
 apiVersion: ksflow.io/v1alpha1
-kind: ClusterKafkaClusterConfig
+kind: ClusterKafkaConfig
 metadata:
   name: ksflow-quickstart
 spec:

@@ -8,7 +8,7 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaclusterconfigs
+  - clusterkafkaconfigs
   verbs:
   - create
   - delete
@@ -20,13 +20,13 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaclusterconfigs/finalizers
+  - clusterkafkaconfigs/finalizers
   verbs:
   - update
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaclusterconfigs/status
+  - clusterkafkaconfigs/status
   verbs:
   - get
   - patch
