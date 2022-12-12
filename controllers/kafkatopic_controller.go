@@ -179,6 +179,8 @@ func (r *KafkaTopicReconciler) getKafkaTopicConfigFromKafka(ctx context.Context,
 }
 
 func (r *KafkaTopicReconciler) updateTopicInKafka(ctx context.Context, kt *ksfv1.KafkaTopic, kadmClient *kadm.Client) error {
+	logger := log.FromContext(ctx)
+
 	// Set Partitions
 	if kt.Spec.Partitions != nil && kt.Spec.Partitions != kt.Status.Partitions {
 		updatePartitionsResponses, err := kadmClient.UpdatePartitions(ctx, int(*kt.Spec.Partitions), kt.Status.FullTopicName)
@@ -203,22 +205,25 @@ func (r *KafkaTopicReconciler) updateTopicInKafka(ctx context.Context, kt *ksfv1
 			alterConfigs = append(alterConfigs, kadm.AlterConfig{Op: kadm.DeleteConfig, Name: k, Value: v})
 		}
 	}
-	alterConfigsResponses, err := kadmClient.AlterTopicConfigs(ctx, alterConfigs, kt.Status.FullTopicName)
-	if err != nil {
-		return err
-	}
-	alterConfigsResponse, err := alterConfigsResponses.On(kt.Status.FullTopicName, nil)
-	if err != nil {
-		return err
-	}
-	if alterConfigsResponse.Err != nil {
-		return err
+	if len(alterConfigs) != 0 {
+		alterConfigsResponses, err := kadmClient.AlterTopicConfigs(ctx, alterConfigs, kt.Status.FullTopicName)
+		if err != nil {
+			return err
+		}
+		alterConfigsResponse, err := alterConfigsResponses.On(kt.Status.FullTopicName, nil)
+		if err != nil {
+			return err
+		}
+		if alterConfigsResponse.Err != nil {
+			return err
+		}
 	}
 
 	// Set ReplicationFactor
-
-	//TODO: implement
-	kadmClient.ListPartitionReassignments()
+	if kt.Spec.ReplicationFactor != nil && kt.Spec.ReplicationFactor != kt.Status.ReplicationFactor {
+		// validating webhook should handle this for now, so this shouldn't ever happen
+		logger.Error(fmt.Errorf("cannot change replicationFactor from %d to %d", kt.Status.ReplicationFactor, kt.Spec.ReplicationFactor), "updating replication factor is not yet supported")
+	}
 
 	return nil
 }
