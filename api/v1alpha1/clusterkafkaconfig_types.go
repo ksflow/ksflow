@@ -60,7 +60,7 @@ type ClusterKafkaConfigSpec struct {
 // ClusterKafkaConfigStatus defines the observed state of ClusterKafkaConfig
 type ClusterKafkaConfigStatus struct {
 	Phase       ClusterKafkaConfigPhase `json:"phase,omitempty"`
-	Message     string                  `json:"message,omitempty"`
+	Reason      string                  `json:"reason,omitempty"`
 	LastUpdated metav1.Time             `json:"lastUpdated,omitempty"`
 }
 
@@ -81,7 +81,7 @@ const (
 // +kubebuilder:printcolumn:name="Prefix",type=string,JSONPath=`.spec.topicPrefix`
 // +kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.configs.security\.protocol`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
-// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
 // ClusterKafkaConfig is the Schema for the clusterkafkaconfigs API

@@ -27,8 +27,8 @@ spec:
     - jsonPath: .status.phase
       name: Status
       type: string
-    - jsonPath: .status.message
-      name: Message
+    - jsonPath: .status.reason
+      name: Reason
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -89,8 +89,6 @@ spec:
               lastUpdated:
                 format: date-time
                 type: string
-              message:
-                type: string
               phase:
                 description: ClusterKafkaConfigPhase defines the phase of the ClusterKafkaConfig
                 enum:
@@ -98,6 +96,8 @@ spec:
                 - Available
                 - Failed
                 - Deleting
+                type: string
+              reason:
                 type: string
             type: object
         type: object

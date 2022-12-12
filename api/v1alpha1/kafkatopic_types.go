@@ -20,17 +20,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +kubebuilder:validation:Enum=Delete;Retain
+
+type KafkaTopicReclaimPolicy string
+
+const (
+	KafkaTopicReclaimPolicyDelete KafkaTopicReclaimPolicy = "Delete"
+	KafkaTopicReclaimPolicyRetain KafkaTopicReclaimPolicy = "Retain"
+)
+
 // KafkaTopicSpec defines the desired state of KafkaTopic
 type KafkaTopicSpec struct {
-	// +kubebuilder:default=-1
+	// +kubebuilder:validation:Minimum=1
 
 	// Partitions is the number of partitions in the topic.
-	Partitions int32 `json:"partitions"`
+	// +optional
+	Partitions *int32 `json:"partitions,omitempty"`
 
-	// +kubebuilder:default=-1
+	// +kubebuilder:validation:Minimum=1
 
 	// ReplicationFactor is the number of replicas for each of the topic's partitions.
-	ReplicationFactor int16 `json:"replicationFactor"`
+	// +optional
+	ReplicationFactor *int16 `json:"replicationFactor,omitempty"`
+
+	// +kubebuilder:default=Delete
+
+	// ReclaimPolicy defines what should happen to the underlying kafka topic if the KafkaTopic is deleted.
+	// +optional
+	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
 
 	// Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
 	// All values are specified as strings, since support for floating-point varies across languages
@@ -44,7 +61,7 @@ type KafkaTopicSpec struct {
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
 	Phase       KafkaTopicPhase `json:"phase,omitempty"`
-	Message     string          `json:"message,omitempty"`
+	Reason      string          `json:"reason,omitempty"`
 	LastUpdated metav1.Time     `json:"lastUpdated,omitempty"`
 }
 
@@ -66,6 +83,9 @@ const (
 // +kubebuilder:resource:shortName=kt
 // +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.spec.partitions`
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicationFactor`
+// +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.spec.reclaimPolicy`
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
 // KafkaTopic is the Schema for the kafkatopics API

@@ -19,12 +19,11 @@ package controllers
 import (
 	"context"
 
+	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
 // KafkaTopicReconciler reconciles a KafkaTopic object
@@ -36,20 +35,19 @@ type KafkaTopicReconciler struct {
 // +kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics/finalizers,verbs=update
+// +kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs,verbs=get;watch;list
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the KafkaTopic object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.1/pkg/reconcile
 func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Get Object
+	var kt ksfv1.KafkaTopic
+	if err := r.Get(ctx, req.NamespacedName, &kt); err != nil {
+		logger.Error(err, "unable to get KafkaTopic")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
 	return ctrl.Result{}, nil
 }

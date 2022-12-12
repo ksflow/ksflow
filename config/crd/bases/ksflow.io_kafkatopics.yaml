@@ -24,6 +24,15 @@ spec:
     - jsonPath: .spec.replicationFactor
       name: Replicas
       type: string
+    - jsonPath: .spec.reclaimPolicy
+      name: ReclaimPolicy
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .status.reason
+      name: Reason
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -1547,26 +1556,29 @@ spec:
                     type: integer
                 type: object
               partitions:
-                default: -1
                 description: Partitions is the number of partitions in the topic.
                 format: int32
+                minimum: 1
                 type: integer
+              reclaimPolicy:
+                default: Delete
+                description: ReclaimPolicy defines what should happen to the underlying
+                  kafka topic if the KafkaTopic is deleted.
+                enum:
+                - Delete
+                - Retain
+                type: string
               replicationFactor:
-                default: -1
                 description: ReplicationFactor is the number of replicas for each
                   of the topic's partitions.
+                minimum: 1
                 type: integer
-            required:
-            - partitions
-            - replicationFactor
             type: object
           status:
             description: KafkaTopicStatus defines the observed state of KafkaTopic
             properties:
               lastUpdated:
                 format: date-time
-                type: string
-              message:
                 type: string
               phase:
                 description: KafkaTopicPhase defines the phase of the KafkaTopic
@@ -1576,6 +1588,8 @@ spec:
                 - Available
                 - Failed
                 - Deleting
+                type: string
+              reason:
                 type: string
             type: object
         type: object

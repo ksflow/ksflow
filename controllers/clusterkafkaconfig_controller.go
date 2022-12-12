@@ -39,7 +39,8 @@ type ClusterKafkaConfigReconciler struct {
 // +kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop for the request
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
 func (r *ClusterKafkaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
@@ -64,10 +65,10 @@ func (r *ClusterKafkaConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	connErr := kafkaClient.Ping(ctx)
 	if connErr != nil {
 		ckc.Status.Phase = ksfv1.ClusterKafkaConfigPhaseFailed
-		ckc.Status.Message = "unable to request api versions from brokers"
+		ckc.Status.Reason = "unable to request api versions from brokers"
 	} else {
 		ckc.Status.Phase = ksfv1.ClusterKafkaConfigPhaseAvailable
-		ckc.Status.Message = ""
+		ckc.Status.Reason = ""
 	}
 	ckc.Status.LastUpdated = metav1.Now()
 

@@ -19,22 +19,22 @@ helm install ksflow ksflow/ksflow
 # install kafka
 kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-kafka.yaml
 
-# configure ksflow to know about kafka
+# create a ClusterKafkaConfig
 kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-ckc.yaml
 
-# verify controller can connect to Kafka
-kubectl get ckc # STATUS should show as "Available"
+# watch the ClusterKafkaConfig until it's STATUS is "Available"
+kubectl get ckc --watch
 ```
 
 #### Create a Topic
 ```shell
-# create a topic
+# create a KafkaTopic
 kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-kt.yaml
 
-# watch the topic until it's STATUS is "Available"
-kubectl watch kt quickstart
+# watch the KafkaTopic until it's STATUS is "Available"
+kubectl get kt --watch
 
-# verify topic was created
+# verify the topic was created in kafka
 kubectl exec deploy/ksflow-quickstart-kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
 ```
 
