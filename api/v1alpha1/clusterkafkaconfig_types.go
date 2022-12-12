@@ -73,7 +73,6 @@ const (
 	ClusterKafkaConfigPhaseUnknown   ClusterKafkaConfigPhase = ""
 	ClusterKafkaConfigPhaseAvailable ClusterKafkaConfigPhase = "Available"
 	ClusterKafkaConfigPhaseFailed    ClusterKafkaConfigPhase = "Failed"
-	ClusterKafkaConfigPhaseDeleting  ClusterKafkaConfigPhase = "Deleting"
 )
 
 // +kubebuilder:object:root=true

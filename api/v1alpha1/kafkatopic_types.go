@@ -22,15 +22,12 @@ import (
 
 // KafkaTopicSpec defines the desired state of KafkaTopic
 type KafkaTopicSpec struct {
-	// KafkaConfigRef is a reference to the KafkaConfig or ClusterKafkaConfig that this topic belongs to
-	KafkaConfigRef ObjectRef `json:"kafkaConfigRef,omitempty"`
-
-	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=-1
 
 	// Partitions is the number of partitions in the topic.
 	Partitions int32 `json:"partitions"`
 
-	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=-1
 
 	// ReplicationFactor is the number of replicas for each of the topic's partitions.
 	ReplicationFactor int16 `json:"replicationFactor"`
@@ -45,7 +42,23 @@ type KafkaTopicSpec struct {
 
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
+	Phase       KafkaTopicPhase `json:"phase,omitempty"`
+	Message     string          `json:"message,omitempty"`
+	LastUpdated metav1.Time     `json:"lastUpdated,omitempty"`
 }
+
+// +kubebuilder:validation:Enum="";Creating;Available;Failed;Deleting
+
+// KafkaTopicPhase defines the phase of the KafkaTopic
+type KafkaTopicPhase string
+
+const (
+	KafkaTopicPhaseUnknown   ClusterKafkaConfigPhase = ""
+	KafkaTopicPhaseCreating  ClusterKafkaConfigPhase = "Creating"
+	KafkaTopicPhaseDeleting  ClusterKafkaConfigPhase = "Deleting"
+	KafkaTopicPhaseAvailable ClusterKafkaConfigPhase = "Available"
+	KafkaTopicPhaseFailed    ClusterKafkaConfigPhase = "Failed"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

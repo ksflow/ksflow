@@ -21,37 +21,36 @@ To ensure that multiple KafkaTopics don't attempt to configure the same topic, k
 name to construct the Kafka topic name. Additionally, a `ClusterKafkaConfig` specifies the topic prefix to be used.
 The resulting topic in Kafka has the following structure: `<my-clusterkafkaconfig-name>.<my-kafkatopic-namespace>.<my-kafkatopic-name>`.
 
-Let's take a look at an example provided in the Kafka documentation:
-> By project or product: Here, a team manages more than one project. Their credentials will be different for each project, so all the controls and settings will always be project related.
->
-> Example topic naming structure:
->
-> &lt;project&gt;.&lt;product&gt;.&lt;event-name&gt;
-> (e.g., "mobility.payments.suspicious")
+For example, let's consider the following topic naming structure:
+
+    <organization>.<team>.<dataset>-<event-name>
+    (e.g., "acme.infosec.telemetry-logins")
 
 This could be accomplished with the following:
+
 ```yaml
 apiVersion: ksflow.io/v1alpha1
 kind: ClusterKafkaConfig
 metadata:
-  name: mycluster-mobility
+  name: default
 spec:
-  topicPrefix: mobility
+  topicPrefix: acme
   configs:
     bootstrap.servers: b-1.mycluster.123z8u.c2.kafka.us-east-1.amazonaws.com:9094,b-2.mycluster.123z8u.c2.kafka.us-east-1.amazonaws.com:9094
-  ...
+    security.protocol: SSL
 ---
 apiVersion: ksflow.io/v1alpha1
 kind: KafkaTopic
 metadata:
-  name: suspicious
-  namespace: payments
-spec:
-  kafkaConfigRef:
-    name: mycluster-mobility
-  ...
+  name: telemetry-logins
+  namespace: infosec
 ```
 
-This is just one example, configuration will depend on your use-case.
+When running multiple Kubernetes clusters pointed at the same Kafka cluster:
+* If globally unique namespace names are enforced then each "default" ClusterKafkaConfig can use the same topicPrefix if desired.
+* If namespace names are not globally unique, then do one of the following:
+  1. Set a different topicPrefix for clusters that might have namespaces with the same names.
+  2. Keep the same topicPrefix for clusters but avoid defining `KafkaTopics` and `KafkaACLs` in the same namespaces in
+  multiple clusters with the same topicPrefix.
 
 For specifics on how topic names are used for authorization in ksflow, see [security.md](./security.md).

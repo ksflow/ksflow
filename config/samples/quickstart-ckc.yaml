@@ -1,7 +1,7 @@
 apiVersion: ksflow.io/v1alpha1
 kind: ClusterKafkaConfig
 metadata:
-  name: ksflow-quickstart
+  name: default
 spec:
   topicPrefix: io.ksflow.quickstart
   configs:
