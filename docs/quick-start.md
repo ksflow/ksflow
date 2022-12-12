@@ -27,11 +27,16 @@ kubectl get ckc # STATUS should show as "Available"
 ```
 
 #### Create a Topic
-TODO!!!!!!!!!!!!!!!!!!!!!!!
-1. Verify the topic was created
-   ```shell
-   kubectl exec deploy/ksflow-quickstart-kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
-   ```
+```shell
+# create a topic
+kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-kt.yaml
+
+# watch the topic until it's STATUS is "Available"
+kubectl watch kt quickstart
+
+# verify topic was created
+kubectl exec deploy/ksflow-quickstart-kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+```
 
 #### Uninstall
 ```shell

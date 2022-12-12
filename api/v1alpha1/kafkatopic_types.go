@@ -33,7 +33,8 @@ type KafkaTopicSpec struct {
 	ReplicationFactor int16 `json:"replicationFactor"`
 
 	// Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
-	Configs *KafkaTopicConfigs `json:"configs,omitempty"`
+	// All values are specified as strings, since support for floating-point varies across languages
+	Configs map[string]*string `json:"configs,omitempty"`
 
 	// JobTemplate is used to customize the Job that runs to create/modify/delete the topic
 	// +optional
