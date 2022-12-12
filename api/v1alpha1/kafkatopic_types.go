@@ -29,8 +29,12 @@ const (
 	KafkaTopicReclaimPolicyRetain KafkaTopicReclaimPolicy = "Retain"
 )
 
-// KafkaTopicSpec defines the desired state of KafkaTopic
-type KafkaTopicSpec struct {
+func (kt *KafkaTopic) RawTopicName(kc *KafkaConfig) string {
+	return kc.Spec.TopicPrefix + "." + kt.Namespace + "." + kt.Name
+}
+
+// KafkaTopicConfig is the part of the KafkaTopicSpec that maps directly to a real Kafka topic
+type KafkaTopicConfig struct {
 	// +kubebuilder:validation:Minimum=1
 
 	// Partitions is the number of partitions in the topic.
@@ -43,26 +47,31 @@ type KafkaTopicSpec struct {
 	// +optional
 	ReplicationFactor *int16 `json:"replicationFactor,omitempty"`
 
+	// Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
+	// All values are specified as strings, since support for floating-point varies across languages
+	Configs map[string]*string `json:"configs,omitempty"`
+}
+
+// KafkaTopicSpec defines the desired state of KafkaTopic
+type KafkaTopicSpec struct {
+
+	// +optional
+	KafkaTopicConfig `json:",inline"`
+
 	// +kubebuilder:default=Delete
 
 	// ReclaimPolicy defines what should happen to the underlying kafka topic if the KafkaTopic is deleted.
 	// +optional
 	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
-
-	// Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
-	// All values are specified as strings, since support for floating-point varies across languages
-	Configs map[string]*string `json:"configs,omitempty"`
-
-	// JobTemplate is used to customize the Job that runs to create/modify/delete the topic
-	// +optional
-	JobTemplate *JobTemplate `json:"jobTemplate,omitempty"`
 }
 
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
-	Phase       KafkaTopicPhase `json:"phase,omitempty"`
-	Reason      string          `json:"reason,omitempty"`
-	LastUpdated metav1.Time     `json:"lastUpdated,omitempty"`
+	Phase            KafkaTopicPhase `json:"phase,omitempty"`
+	Reason           string          `json:"reason,omitempty"`
+	KafkaTopicConfig `json:",inline"`
+	FullTopicName    string      `json:"fullTopicName,omitempty"`
+	LastUpdated      metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // +kubebuilder:validation:Enum="";Creating;Available;Failed;Deleting
@@ -71,11 +80,11 @@ type KafkaTopicStatus struct {
 type KafkaTopicPhase string
 
 const (
-	KafkaTopicPhaseUnknown   KafkaConfigPhase = ""
-	KafkaTopicPhaseCreating  KafkaConfigPhase = "Creating"
-	KafkaTopicPhaseDeleting  KafkaConfigPhase = "Deleting"
-	KafkaTopicPhaseAvailable KafkaConfigPhase = "Available"
-	KafkaTopicPhaseFailed    KafkaConfigPhase = "Failed"
+	KafkaTopicPhaseUnknown   KafkaTopicPhase = ""
+	KafkaTopicPhaseCreating  KafkaTopicPhase = "Creating"
+	KafkaTopicPhaseDeleting  KafkaTopicPhase = "Deleting"
+	KafkaTopicPhaseAvailable KafkaTopicPhase = "Available"
+	KafkaTopicPhaseFailed    KafkaTopicPhase = "Failed"
 )
 
 // +kubebuilder:object:root=true
@@ -84,6 +93,7 @@ const (
 // +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.spec.partitions`
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicationFactor`
 // +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.spec.reclaimPolicy`
+// +kubebuilder:printcolumn:name="TopicName",type=string,JSONPath=`.status.fullTopicName`,priority=10
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`

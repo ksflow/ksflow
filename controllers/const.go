@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// File modified from https://github.com/numaproj/numaflow/blob/cc44875b2a2e01694ceca1fb085c3423bd330a38/pkg/apis/numaflow/v1alpha1/metadata.go
+package controllers
 
-package v1alpha1
-
-type Metadata struct {
-	Annotations map[string]string `json:"annotations,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
-}
+const (
+	KafkaConfigName         = "default"
+	KafkaTopicFinalizerName = "finalizers.ksflow.io/KafkaTopic"
+)
