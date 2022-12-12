@@ -19,11 +19,11 @@ helm install ksflow ksflow/ksflow
 # install kafka
 kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-kafka.yaml
 
-# create a ClusterKafkaConfig
-kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-ckc.yaml
+# create a KafkaConfig
+kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-kc.yaml
 
-# watch the ClusterKafkaConfig until it's STATUS is "Available"
-kubectl get ckc --watch
+# watch the KafkaConfig until it's STATUS is "Available"
+kubectl get kc --watch
 ```
 
 #### Create a Topic

@@ -83,11 +83,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ClusterKafkaConfigReconciler{
+	if err = (&controllers.KafkaConfigReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterKafkaConfig")
+		setupLog.Error(err, "unable to create controller", "controller", "KafkaConfig")
 		os.Exit(1)
 	}
 	if err = (&controllers.KafkaTopicReconciler{

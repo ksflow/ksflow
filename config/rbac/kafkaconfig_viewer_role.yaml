@@ -1,20 +1,20 @@
-# permissions for end users to view clusterkafkaconfigs.
+# permissions for end users to view kafkaconfigs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: clusterkafkaconfig-viewer-role
+    app.kubernetes.io/instance: kafkaconfig-viewer-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ksflow
     app.kubernetes.io/part-of: ksflow
     app.kubernetes.io/managed-by: kustomize
-  name: clusterkafkaconfig-viewer-role
+  name: kafkaconfig-viewer-role
 rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaconfigs
+  - kafkaconfigs
   verbs:
   - get
   - list
@@ -22,6 +22,6 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaconfigs/status
+  - kafkaconfigs/status
   verbs:
   - get

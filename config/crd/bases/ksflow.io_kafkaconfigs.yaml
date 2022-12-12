@@ -5,16 +5,16 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: clusterkafkaconfigs.ksflow.io
+  name: kafkaconfigs.ksflow.io
 spec:
   group: ksflow.io
   names:
-    kind: ClusterKafkaConfig
-    listKind: ClusterKafkaConfigList
-    plural: clusterkafkaconfigs
+    kind: KafkaConfig
+    listKind: KafkaConfigList
+    plural: kafkaconfigs
     shortNames:
-    - ckc
-    singular: clusterkafkaconfig
+    - kc
+    singular: kafkaconfig
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -36,8 +36,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterKafkaConfig is the Schema for the clusterkafkaconfigs
-          API
+        description: KafkaConfig is the Schema for the kafkaconfigs API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -52,7 +51,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClusterKafkaConfigSpec defines the desired state of ClusterKafkaConfig
+            description: KafkaConfigSpec defines the desired state of KafkaConfig
             properties:
               configs:
                 description: Kafka Configs for connecting to the cluster.
@@ -84,13 +83,13 @@ spec:
             - topicPrefix
             type: object
           status:
-            description: ClusterKafkaConfigStatus defines the observed state of ClusterKafkaConfig
+            description: KafkaConfigStatus defines the observed state of KafkaConfig
             properties:
               lastUpdated:
                 format: date-time
                 type: string
               phase:
-                description: ClusterKafkaConfigPhase defines the phase of the ClusterKafkaConfig
+                description: KafkaConfigPhase defines the phase of the KafkaConfig
                 enum:
                 - ""
                 - Available

@@ -29,10 +29,10 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ClusterKafkaConfig controller", func() {
+var _ = Describe("KafkaConfig controller", func() {
 
 	const (
-		CKCCName      = "test-ckc"
+		CKCCName      = "test-kc"
 		CKCCNamespace = "default"
 
 		CKCCSecurityProtocol = "PLAINTEXT"
@@ -42,20 +42,20 @@ var _ = Describe("ClusterKafkaConfig controller", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When updating ClusterKafkaConfig bootstrap.servers", func() {
-		It("Should update the ClusterKafkaConfig connection Status", func() {
-			By("By creating a new ClusterKafkaConfig")
+	Context("When updating KafkaConfig bootstrap.servers", func() {
+		It("Should update the KafkaConfig connection Status", func() {
+			By("By creating a new KafkaConfig")
 			ctx := context.Background()
-			ckc := &ksfv1.ClusterKafkaConfig{
+			kc := &ksfv1.KafkaConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "ksflow.io/v1alpha1",
-					Kind:       "ClusterKafkaConfig",
+					Kind:       "KafkaConfig",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      CKCCName,
 					Namespace: CKCCNamespace,
 				},
-				Spec: ksfv1.ClusterKafkaConfigSpec{
+				Spec: ksfv1.KafkaConfigSpec{
 					TopicPrefix: "io.ksflow.test",
 					Configs: ksfv1.KafkaConfigs{
 						BootstrapServers: strings.Join(testPostgresContainerWrapper.GetAddresses(), ","),
@@ -63,10 +63,10 @@ var _ = Describe("ClusterKafkaConfig controller", func() {
 					},
 				},
 			}
-			Expect(testK8sClient.Create(ctx, ckc)).Should(Succeed())
+			Expect(testK8sClient.Create(ctx, kc)).Should(Succeed())
 
 			CKCCNamespacedName := types.NamespacedName{Name: CKCCName, Namespace: CKCCNamespace}
-			createdCKCC := &ksfv1.ClusterKafkaConfig{}
+			createdCKCC := &ksfv1.KafkaConfig{}
 			Eventually(func() bool {
 				err := testK8sClient.Get(ctx, CKCCNamespacedName, createdCKCC)
 				if err != nil {
@@ -76,7 +76,7 @@ var _ = Describe("ClusterKafkaConfig controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCKCC.Spec.TopicPrefix).Should(Equal("io.ksflow.test"))
 
-			By("By checking that the ClusterKafkaConfig has a Failed phase")
+			By("By checking that the KafkaConfig has a Failed phase")
 			Eventually(func() (string, error) {
 				err := testK8sClient.Get(ctx, CKCCNamespacedName, createdCKCC)
 				if err != nil {
@@ -89,9 +89,9 @@ var _ = Describe("ClusterKafkaConfig controller", func() {
 
 			// add label to trigger reconcile
 			patchStr := fmt.Sprintf(`{"spec": {"configs": {"bootstrap.servers": "%s"}}}`, strings.Join(testKafkaContainerWrapper.GetAddresses(), ","))
-			Expect(testK8sClient.Patch(ctx, ckc, crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
+			Expect(testK8sClient.Patch(ctx, kc, crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
 
-			By("By checking that the ClusterKafkaConfig has an Available phase")
+			By("By checking that the KafkaConfig has an Available phase")
 			Eventually(func() (string, error) {
 				err := testK8sClient.Get(ctx, CKCCNamespacedName, createdCKCC)
 				if err != nil {

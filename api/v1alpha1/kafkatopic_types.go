@@ -71,11 +71,11 @@ type KafkaTopicStatus struct {
 type KafkaTopicPhase string
 
 const (
-	KafkaTopicPhaseUnknown   ClusterKafkaConfigPhase = ""
-	KafkaTopicPhaseCreating  ClusterKafkaConfigPhase = "Creating"
-	KafkaTopicPhaseDeleting  ClusterKafkaConfigPhase = "Deleting"
-	KafkaTopicPhaseAvailable ClusterKafkaConfigPhase = "Available"
-	KafkaTopicPhaseFailed    ClusterKafkaConfigPhase = "Failed"
+	KafkaTopicPhaseUnknown   KafkaConfigPhase = ""
+	KafkaTopicPhaseCreating  KafkaConfigPhase = "Creating"
+	KafkaTopicPhaseDeleting  KafkaConfigPhase = "Deleting"
+	KafkaTopicPhaseAvailable KafkaConfigPhase = "Available"
+	KafkaTopicPhaseFailed    KafkaConfigPhase = "Failed"
 )
 
 // +kubebuilder:object:root=true

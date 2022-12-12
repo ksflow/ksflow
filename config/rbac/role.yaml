@@ -8,32 +8,6 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaconfigs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ksflow.io
-  resources:
-  - clusterkafkaconfigs/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ksflow.io
-  resources:
-  - clusterkafkaconfigs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - ksflow.io
-  resources:
   - kafkaacls
   verbs:
   - create
@@ -79,6 +53,32 @@ rules:
   - ksflow.io
   resources:
   - kafkaadminclientconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaconfigs/status
   verbs:
   - get
   - patch

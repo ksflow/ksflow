@@ -35,7 +35,7 @@ type KafkaTopicReconciler struct {
 // +kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics/finalizers,verbs=update
-// +kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkaconfigs,verbs=get;watch;list
+// +kubebuilder:rbac:groups=ksflow.io,resources=kafkaconfigs,verbs=get;watch;list
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

@@ -1,20 +1,20 @@
-# permissions for end users to edit clusterkafkaconfigs.
+# permissions for end users to edit kafkaconfigs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: clusterkafkaconfig-editor-role
+    app.kubernetes.io/instance: kafkaconfig-editor-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ksflow
     app.kubernetes.io/part-of: ksflow
     app.kubernetes.io/managed-by: kustomize
-  name: clusterkafkaconfig-editor-role
+  name: kafkaconfig-editor-role
 rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaconfigs
+  - kafkaconfigs
   verbs:
   - create
   - delete
@@ -26,6 +26,6 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - clusterkafkaconfigs/status
+  - kafkaconfigs/status
   verbs:
   - get

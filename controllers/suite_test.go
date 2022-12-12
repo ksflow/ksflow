@@ -94,7 +94,7 @@ var _ = BeforeSuite(func() {
 	k8sManager, err := ctrl.NewManager(testCfg, ctrl.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&ClusterKafkaConfigReconciler{
+	err = (&KafkaConfigReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 	}).SetupWithManager(k8sManager)

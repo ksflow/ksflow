@@ -1,5 +1,5 @@
 apiVersion: ksflow.io/v1alpha1
-kind: ClusterKafkaConfig
+kind: KafkaConfig
 metadata:
   name: default
 spec:
