@@ -29,9 +29,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // KafkaTopicReconciler reconciles a KafkaTopic object
@@ -276,5 +281,29 @@ func (r *KafkaTopicReconciler) deleteTopicFromKafka(ctx context.Context, topic s
 func (r *KafkaTopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ksfv1.KafkaTopic{}).
+		Watches(
+			&source.Kind{Type: &ksfv1.KafkaConfig{}},
+			handler.EnqueueRequestsFromMapFunc(r.findObjectsForKafkaConfig),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
+}
+
+func (r *KafkaTopicReconciler) findObjectsForKafkaConfig(_ client.Object) []reconcile.Request {
+	kafkaTopics := &ksfv1.KafkaTopicList{}
+	err := r.List(context.TODO(), kafkaTopics)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, len(kafkaTopics.Items))
+	for i, item := range kafkaTopics.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+			},
+		}
+	}
+	return requests
 }
