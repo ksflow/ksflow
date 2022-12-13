@@ -611,6 +611,7 @@ func (in *KafkaTopicSpec) DeepCopy() *KafkaTopicSpec {
 func (in *KafkaTopicStatus) DeepCopyInto(out *KafkaTopicStatus) {
 	*out = *in
 	in.KafkaTopicConfig.DeepCopyInto(&out.KafkaTopicConfig)
+	out.KafkaConfigs = in.KafkaConfigs
 	in.LastUpdated.DeepCopyInto(&out.LastUpdated)
 }
 

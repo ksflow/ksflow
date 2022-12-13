@@ -73,6 +73,7 @@ const (
 	KafkaConfigPhaseUnknown   KafkaConfigPhase = ""
 	KafkaConfigPhaseAvailable KafkaConfigPhase = "Available"
 	KafkaConfigPhaseFailed    KafkaConfigPhase = "Failed"
+	KafkaConfigPhaseDeleting  KafkaConfigPhase = "Deleting"
 )
 
 // +kubebuilder:object:root=true

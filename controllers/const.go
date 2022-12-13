@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 const (
-	KafkaConfigName         = "default"
-	KafkaTopicFinalizerName = "finalizers.ksflow.io/KafkaTopic"
+	KafkaConfigName          = "default"
+	KafkaConfigFinalizerName = "finalizers.ksflow.io/KafkaConfig"
+	KafkaTopicFinalizerName  = "finalizers.ksflow.io/KafkaTopic"
 )

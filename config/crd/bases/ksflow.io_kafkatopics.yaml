@@ -98,6 +98,26 @@ spec:
                 type: object
               fullTopicName:
                 type: string
+              kafkaConfigs:
+                description: KafkaConfigs defines the Kafka configs for connecting
+                  to the Kafka Cluster configs match what kafka clients use to connect.
+                properties:
+                  bootstrap.servers:
+                    description: The "bootstrap.servers" kafka config for connecting
+                      to the cluster. For example "host1:port1,host2:port2".
+                    pattern: ^([^,:]+):(\d+)(,([^,:]+):(\d+))*$
+                    type: string
+                  security.protocol:
+                    description: The "security.protocol" kafka config for connecting
+                      to the cluster, must be "PLAINTEXT" or "SSL".
+                    enum:
+                    - PLAINTEXT
+                    - SSL
+                    type: string
+                required:
+                - bootstrap.servers
+                - security.protocol
+                type: object
               lastUpdated:
                 format: date-time
                 type: string

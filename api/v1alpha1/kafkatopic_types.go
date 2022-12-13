@@ -67,11 +67,12 @@ type KafkaTopicSpec struct {
 
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
+	KafkaTopicConfig `json:",inline"`
+	KafkaConfigs     KafkaConfigs    `json:"kafkaConfigs,omitempty"`
 	Phase            KafkaTopicPhase `json:"phase,omitempty"`
 	Reason           string          `json:"reason,omitempty"`
-	KafkaTopicConfig `json:",inline"`
-	FullTopicName    string      `json:"fullTopicName,omitempty"`
-	LastUpdated      metav1.Time `json:"lastUpdated,omitempty"`
+	FullTopicName    string          `json:"fullTopicName,omitempty"`
+	LastUpdated      metav1.Time     `json:"lastUpdated,omitempty"`
 }
 
 // +kubebuilder:validation:Enum="";Creating;Available;Failed;Deleting

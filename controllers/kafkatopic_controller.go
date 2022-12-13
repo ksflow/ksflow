@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
@@ -66,7 +67,7 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var kc ksfv1.KafkaConfig
 	if err := r.Get(ctx, types.NamespacedName{Name: KafkaConfigName}, &kc); err != nil {
 		reason := fmt.Sprintf("unabled to get %q KafkaConfig", KafkaConfigName)
-		return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, reason)
+		return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, reason, true)
 	}
 
 	// Create kafka client
@@ -79,27 +80,36 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	defer kgoClient.Close()
 	kadmClient := kadm.NewClient(kgoClient)
+	kt.Status.KafkaConfigs = kc.Spec.Configs
 	kt.Status.FullTopicName = kt.RawTopicName(&kc)
 
 	// Topic delete logic
 	if kt.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(&kt, KafkaTopicFinalizerName) {
 			controllerutil.AddFinalizer(&kt, KafkaTopicFinalizerName)
-			if err := r.Update(ctx, &kt); err != nil {
-				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to add finalizer")
+			if err = r.Update(ctx, &kt); err != nil {
+				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to add finalizer", true)
 			}
 		}
 	} else {
 		if controllerutil.ContainsFinalizer(&kt, KafkaTopicFinalizerName) {
 			if *kt.Spec.ReclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
-				if err := r.deleteTopicFromKafka(ctx, kt.Status.FullTopicName, kadmClient); err != nil {
-					return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to delete topic from kafka")
+				if err = r.deleteTopicFromKafka(ctx, kt.Status.FullTopicName, kadmClient); err != nil {
+					return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to delete topic from kafka", true)
 				}
 			}
-
+			exists, err := r.topicExists(ctx, kt.Status.FullTopicName, kadmClient)
+			if err != nil {
+				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to check if topic was deleted from kafka", true)
+			}
+			if exists {
+				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
+				reason := "waiting for topic to finish deleting"
+				return r.updateStatus(ctx, &kt, errors.New(reason), ksfv1.KafkaTopicPhaseDeleting, reason, false)
+			}
 			controllerutil.RemoveFinalizer(&kt, KafkaTopicFinalizerName)
-			if err := r.Update(ctx, &kt); err != nil {
-				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to remove finalizer")
+			if err = r.Update(ctx, &kt); err != nil {
+				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to remove finalizer", true)
 			}
 		}
 		return ctrl.Result{}, nil
@@ -108,7 +118,7 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Get observed state
 	ktc, err := r.getKafkaTopicConfigFromKafka(ctx, kt.Status.FullTopicName, kadmClient)
 	if err != nil {
-		return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to query kafka for existing topic")
+		return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to query kafka for existing topic", true)
 	}
 
 	if ktc != nil {
@@ -116,35 +126,50 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		kt.Status.KafkaTopicConfig = *ktc
 		err = r.updateTopicInKafka(ctx, &kt, kadmClient)
 		if err != nil {
-			return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to update topic")
+			return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to update topic", true)
 		}
 	} else {
 		// Topic create logic
 		kt.Status.KafkaTopicConfig = ksfv1.KafkaTopicConfig{}
 		err = r.createTopicInKafka(ctx, &kt, kadmClient)
 		if err != nil {
-			return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to create topic")
+			return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to create topic", true)
 		}
 	}
 
-	return r.updateStatus(ctx, &kt, nil, ksfv1.KafkaTopicPhaseAvailable, "")
+	return r.updateStatus(ctx, &kt, nil, ksfv1.KafkaTopicPhaseAvailable, "", true)
 }
 
 func (r *KafkaTopicReconciler) updateStatus(ctx context.Context, kt *ksfv1.KafkaTopic, err error,
-	phase ksfv1.KafkaTopicPhase, reason string) (ctrl.Result, error) {
+	phase ksfv1.KafkaTopicPhase, reason string, logerr bool) (ctrl.Result, error) {
 
 	logger := log.FromContext(ctx)
-	if err != nil {
+	if err != nil && logerr {
 		logger.Error(err, reason)
 	}
 	kt.Status.Phase = phase
 	kt.Status.Reason = reason
-	if uerr := r.Status().Update(ctx, kt); uerr != nil {
-		logger.Error(uerr, "unable to update KafkaTopic status")
-		return ctrl.Result{}, uerr
-	}
 	kt.Status.LastUpdated = metav1.Now()
-	return ctrl.Result{}, err
+	if err = r.Status().Update(ctx, kt); err != nil {
+		logger.Error(err, "unable to update KafkaTopic status")
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r *KafkaTopicReconciler) topicExists(ctx context.Context, topic string, kadmClient *kadm.Client) (bool, error) {
+	allTopicDetails, err := kadmClient.ListTopics(ctx)
+	if err != nil {
+		return false, err
+	}
+	td, ok := allTopicDetails[topic]
+	if !ok || td.Err == kerr.UnknownTopicOrPartition {
+		return false, nil
+	}
+	if td.Err != nil {
+		return false, td.Err
+	}
+	return true, nil
 }
 
 // getKafkaTopicConfigFromKafka attempts to retrieve the state from Kafka
@@ -257,8 +282,6 @@ func (r *KafkaTopicReconciler) createTopicInKafka(ctx context.Context, kt *ksfv1
 }
 
 func (r *KafkaTopicReconciler) deleteTopicFromKafka(ctx context.Context, topic string, kadmClient *kadm.Client) error {
-	logger := log.FromContext(ctx)
-
 	responses, err := kadmClient.DeleteTopics(ctx, topic)
 	if err != nil {
 		return err
@@ -267,12 +290,8 @@ func (r *KafkaTopicReconciler) deleteTopicFromKafka(ctx context.Context, topic s
 	if err != nil {
 		return err
 	}
-	if response.Err != nil {
-		if response.Err.Error() == kerr.UnknownTopicOrPartition.Error() {
-			logger.Error(err, "unable to delete topic", "topic", topic)
-		} else {
-			return response.Err
-		}
+	if response.Err != nil && response.Err != kerr.UnknownTopicOrPartition {
+		return response.Err
 	}
 	return nil
 }

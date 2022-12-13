@@ -18,12 +18,14 @@ package controllers
 
 import (
 	"context"
+	"errors"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
@@ -61,23 +63,57 @@ func (r *KafkaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	defer kafkaClient.Close()
 
+	// Delete logic
+	if kc.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(&kc, KafkaConfigFinalizerName) {
+			controllerutil.AddFinalizer(&kc, KafkaConfigFinalizerName)
+			if err := r.Update(ctx, &kc); err != nil {
+				return r.updateStatus(ctx, &kc, err, ksfv1.KafkaConfigPhaseFailed, "failed to add finalizer", true)
+			}
+		}
+	} else {
+		if controllerutil.ContainsFinalizer(&kc, KafkaConfigFinalizerName) {
+			var ktl ksfv1.KafkaTopicList
+			if ktlErr := r.List(ctx, &ktl); ktlErr != nil {
+				return r.updateStatus(ctx, &kc, err, ksfv1.KafkaConfigPhaseFailed, "unabled to list KafkaTopics", true)
+			}
+			if len(ktl.Items) > 0 {
+				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
+				reason := "waiting for KafkaTopics to be deleted"
+				return r.updateStatus(ctx, &kc, errors.New(reason), ksfv1.KafkaConfigPhaseDeleting, reason, false)
+			}
+
+			controllerutil.RemoveFinalizer(&kc, KafkaConfigFinalizerName)
+			if err := r.Update(ctx, &kc); err != nil {
+				return r.updateStatus(ctx, &kc, err, ksfv1.KafkaConfigPhaseFailed, "failed to remove finalizer", true)
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
 	// Check connection to brokers
 	connErr := kafkaClient.Ping(ctx)
 	if connErr != nil {
-		kc.Status.Phase = ksfv1.KafkaConfigPhaseFailed
-		kc.Status.Reason = "unable to request api versions from brokers"
-	} else {
-		kc.Status.Phase = ksfv1.KafkaConfigPhaseAvailable
-		kc.Status.Reason = ""
+		return r.updateStatus(ctx, &kc, nil, ksfv1.KafkaConfigPhaseFailed, "unable to request api versions from brokers", true)
 	}
-	kc.Status.LastUpdated = metav1.Now()
 
-	// Update status
-	if err = r.Status().Update(ctx, &kc); err != nil {
+	return r.updateStatus(ctx, &kc, nil, ksfv1.KafkaConfigPhaseAvailable, "", true)
+}
+
+func (r *KafkaConfigReconciler) updateStatus(ctx context.Context, kc *ksfv1.KafkaConfig, err error,
+	phase ksfv1.KafkaConfigPhase, reason string, logerr bool) (ctrl.Result, error) {
+
+	logger := log.FromContext(ctx)
+	if err != nil && logerr {
+		logger.Error(err, reason)
+	}
+	kc.Status.Phase = phase
+	kc.Status.Reason = reason
+	kc.Status.LastUpdated = metav1.Now()
+	if err = r.Status().Update(ctx, kc); err != nil {
 		logger.Error(err, "unable to update KafkaConfig status")
 		return ctrl.Result{}, err
 	}
-
 	return ctrl.Result{}, nil
 }
 
