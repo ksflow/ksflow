@@ -22,7 +22,7 @@ provide significant value, but come with various tradeoffs. Specifically, they a
 (i.e. kafka, redis streams, jetstream, kinesis, pulsar, etc.) by injecting themselves into the traffic and providing an
 alternate developer API. For teams **solely focused on Kafka** the provided abstraction often introduces limitations
 and/or requires significant refactoring to existing applications without providing sufficient additional value.
-4. Strimzi not only manages Kafka clusters, but other resource types (i.e. topics, ACLs, etc). However, often it is not
+4. Strimzi not only manages Kafka clusters, but other resource types (i.e. topics, users, etc). However, often it is not
 **cheap** to run Strimzi since "the Topic Operator and User Operator can only watch a single namespace".
 Additionally, Strimzi is written in Java, making it more difficult to work with since most kubernetes controllers are
 **written in Go** (i.e. [strimzi-client-go](https://github.com/RedHatInsights/strimzi-client-go) is a "work in progress").

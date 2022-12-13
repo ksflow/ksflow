@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	cfg "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	crv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
 
 // +kubebuilder:object:root=true
@@ -28,7 +28,7 @@ type KsflowConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// ControllerManagerConfigurationSpec returns the configurations for controllers
-	cfg.ControllerManagerConfigurationSpec `json:",inline"`
+	crv1.ControllerManagerConfigurationSpec `json:",inline"`
 }
 
 func init() {

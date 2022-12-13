@@ -125,6 +125,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaAdminClientConfig")
 		os.Exit(1)
 	}
+	if err = (&ksfv1.KafkaTopic{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "KafkaTopic")
+		os.Exit(1)
+	}
+	if err = (&ksfv1.KafkaConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "KafkaConfig")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
