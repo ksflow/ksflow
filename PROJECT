@@ -15,15 +15,12 @@ resources:
   version: v1alpha1
 - api:
     crdVersion: v1
-  controller: true
+    namespaced: true
   domain: io
   group: ksflow
   kind: KafkaConfig
   path: github.com/ksflow/ksflow/api/v1alpha1
   version: v1alpha1
-  webhooks:
-    validation: true
-    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -31,45 +28,6 @@ resources:
   domain: io
   group: ksflow
   kind: KafkaTopic
-  path: github.com/ksflow/ksflow/api/v1alpha1
-  version: v1alpha1
-  webhooks:
-    validation: true
-    webhookVersion: v1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: io
-  group: ksflow
-  kind: KafkaACL
-  path: github.com/ksflow/ksflow/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: io
-  group: ksflow
-  kind: KafkaConsumerConfig
-  path: github.com/ksflow/ksflow/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: io
-  group: ksflow
-  kind: KafkaProducerConfig
-  path: github.com/ksflow/ksflow/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: io
-  group: ksflow
-  kind: KafkaAdminClientConfig
   path: github.com/ksflow/ksflow/api/v1alpha1
   version: v1alpha1
 version: "3"

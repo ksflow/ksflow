@@ -15,21 +15,9 @@ spec:
     shortNames:
     - kc
     singular: kafkaconfig
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.topicPrefix
-      name: Prefix
-      type: string
-    - jsonPath: .spec.configs.security\.protocol
-      name: Protocol
-      type: string
-    - jsonPath: .status.phase
-      name: Status
-      type: string
-    - jsonPath: .status.reason
-      name: Reason
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -53,54 +41,15 @@ spec:
           spec:
             description: KafkaConfigSpec defines the desired state of KafkaConfig
             properties:
-              configs:
-                description: Kafka Configs for connecting to the cluster.
-                properties:
-                  bootstrap.servers:
-                    description: The "bootstrap.servers" kafka config for connecting
-                      to the cluster. For example "host1:port1,host2:port2".
-                    pattern: ^([^,:]+):(\d+)(,([^,:]+):(\d+))*$
-                    type: string
-                  security.protocol:
-                    description: The "security.protocol" kafka config for connecting
-                      to the cluster, must be "PLAINTEXT" or "SSL".
-                    enum:
-                    - PLAINTEXT
-                    - SSL
-                    type: string
-                required:
-                - bootstrap.servers
-                - security.protocol
-                type: object
-              topicPrefix:
-                description: 'Prefix assigned to every kafka topic, resulting a topic
-                  format matching: "<my-kafkaCluster-topicPrefix>.<my-namespace>.<my-kafkaTopic-name>"'
-                maxLength: 125
-                pattern: ^[a-z]([-a-z0-9\.]*[a-z])?$
+              bootstrapServers:
+                description: BootstrapServers is the Kafka "bootstrap.servers" for
+                  connecting to the Kafka cluster (i.e. "host1:port1,host2:port2").
+                pattern: ^([^,:]+):(\d+)(,([^,:]+):(\d+))*$
                 type: string
             required:
-            - configs
-            - topicPrefix
-            type: object
-          status:
-            description: KafkaConfigStatus defines the observed state of KafkaConfig
-            properties:
-              lastUpdated:
-                format: date-time
-                type: string
-              phase:
-                description: KafkaConfigPhase defines the phase of the KafkaConfig
-                enum:
-                - ""
-                - Available
-                - Failed
-                - Deleting
-                type: string
-              reason:
-                type: string
+            - bootstrapServers
             type: object
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
+    subresources: {}

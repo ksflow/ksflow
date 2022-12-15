@@ -83,54 +83,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.KafkaConfigReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaConfig")
-		os.Exit(1)
-	}
 	if err = (&controllers.KafkaTopicReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaTopic")
-		os.Exit(1)
-	}
-	if err = (&controllers.KafkaACLReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaACL")
-		os.Exit(1)
-	}
-	if err = (&controllers.KafkaConsumerConfigReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaConsumerConfig")
-		os.Exit(1)
-	}
-	if err = (&controllers.KafkaProducerConfigReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaProducerConfig")
-		os.Exit(1)
-	}
-	if err = (&controllers.KafkaAdminClientConfigReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaAdminClientConfig")
-		os.Exit(1)
-	}
-	if err = (&ksfv1.KafkaTopic{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "KafkaTopic")
-		os.Exit(1)
-	}
-	if err = (&ksfv1.KafkaConfig{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "KafkaConfig")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

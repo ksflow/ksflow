@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
@@ -32,7 +31,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -65,8 +63,8 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Get KafkaConfig
 	var kc ksfv1.KafkaConfig
-	if err := r.Get(ctx, types.NamespacedName{Name: KafkaConfigName}, &kc); err != nil {
-		reason := fmt.Sprintf("unabled to get %q KafkaConfig", KafkaConfigName)
+	if err := r.Get(ctx, types.NamespacedName{Name: "default"}, &kc); err != nil {
+		reason := fmt.Sprintf("unabled to get %q KafkaConfig", "default")
 		return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, reason, true)
 	}
 
@@ -80,43 +78,9 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	defer kgoClient.Close()
 	kadmClient := kadm.NewClient(kgoClient)
-	kt.Status.KafkaConfigs = kc.Spec.Configs
-	kt.Status.FullTopicName = kt.RawTopicName(&kc)
-
-	// Topic delete logic
-	if kt.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(&kt, KafkaTopicFinalizerName) {
-			controllerutil.AddFinalizer(&kt, KafkaTopicFinalizerName)
-			if err = r.Update(ctx, &kt); err != nil {
-				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to add finalizer", true)
-			}
-		}
-	} else {
-		if controllerutil.ContainsFinalizer(&kt, KafkaTopicFinalizerName) {
-			if *kt.Spec.ReclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
-				if err = r.deleteTopicFromKafka(ctx, kt.Status.FullTopicName, kadmClient); err != nil {
-					return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to delete topic from kafka", true)
-				}
-			}
-			exists, err := r.topicExists(ctx, kt.Status.FullTopicName, kadmClient)
-			if err != nil {
-				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to check if topic was deleted from kafka", true)
-			}
-			if exists {
-				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
-				reason := "waiting for topic to finish deleting"
-				return r.updateStatus(ctx, &kt, errors.New(reason), ksfv1.KafkaTopicPhaseDeleting, reason, false)
-			}
-			controllerutil.RemoveFinalizer(&kt, KafkaTopicFinalizerName)
-			if err = r.Update(ctx, &kt); err != nil {
-				return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to remove finalizer", true)
-			}
-		}
-		return ctrl.Result{}, nil
-	}
 
 	// Get observed state
-	ktc, err := r.getKafkaTopicConfigFromKafka(ctx, kt.Status.FullTopicName, kadmClient)
+	ktc, err := r.getKafkaTopicConfigFromKafka(ctx, kt.FullTopicName(), kadmClient)
 	if err != nil {
 		return r.updateStatus(ctx, &kt, err, ksfv1.KafkaTopicPhaseFailed, "failed to query kafka for existing topic", true)
 	}
@@ -213,11 +177,11 @@ func (r *KafkaTopicReconciler) updateTopicInKafka(ctx context.Context, kt *ksfv1
 
 	// Set Partitions
 	if kt.Spec.Partitions != nil && kt.Spec.Partitions != kt.Status.Partitions {
-		updatePartitionsResponses, err := kadmClient.UpdatePartitions(ctx, int(*kt.Spec.Partitions), kt.Status.FullTopicName)
+		updatePartitionsResponses, err := kadmClient.UpdatePartitions(ctx, int(*kt.Spec.Partitions), kt.FullTopicName())
 		if err != nil {
 			return err
 		}
-		updatePartitionsResponse, err := updatePartitionsResponses.On(kt.Status.FullTopicName, nil)
+		updatePartitionsResponse, err := updatePartitionsResponses.On(kt.FullTopicName(), nil)
 		if updatePartitionsResponse.Err != nil {
 			return updatePartitionsResponse.Err
 		}
@@ -236,11 +200,11 @@ func (r *KafkaTopicReconciler) updateTopicInKafka(ctx context.Context, kt *ksfv1
 		}
 	}
 	if len(alterConfigs) != 0 {
-		alterConfigsResponses, err := kadmClient.AlterTopicConfigs(ctx, alterConfigs, kt.Status.FullTopicName)
+		alterConfigsResponses, err := kadmClient.AlterTopicConfigs(ctx, alterConfigs, kt.FullTopicName())
 		if err != nil {
 			return err
 		}
-		alterConfigsResponse, err := alterConfigsResponses.On(kt.Status.FullTopicName, nil)
+		alterConfigsResponse, err := alterConfigsResponses.On(kt.FullTopicName(), nil)
 		if err != nil {
 			return err
 		}
@@ -251,7 +215,6 @@ func (r *KafkaTopicReconciler) updateTopicInKafka(ctx context.Context, kt *ksfv1
 
 	// Set ReplicationFactor
 	if kt.Spec.ReplicationFactor != nil && kt.Spec.ReplicationFactor != kt.Status.ReplicationFactor {
-		// validating webhook should handle this for now, so this shouldn't ever happen
 		logger.Error(fmt.Errorf("cannot change replicationFactor from %d to %d", kt.Status.ReplicationFactor, kt.Spec.ReplicationFactor), "updating replication factor is not yet supported")
 	}
 
@@ -267,11 +230,11 @@ func (r *KafkaTopicReconciler) createTopicInKafka(ctx context.Context, kt *ksfv1
 	if kt.Spec.ReplicationFactor != nil {
 		replicationFactor = *kt.Spec.ReplicationFactor
 	}
-	responses, err := kadmClient.CreateTopics(ctx, partitions, replicationFactor, kt.Spec.Configs, kt.Status.FullTopicName)
+	responses, err := kadmClient.CreateTopics(ctx, partitions, replicationFactor, kt.Spec.Configs, kt.FullTopicName())
 	if err != nil {
 		return err
 	}
-	response, err := responses.On(kt.Status.FullTopicName, nil)
+	response, err := responses.On(kt.FullTopicName(), nil)
 	if err != nil {
 		return err
 	}

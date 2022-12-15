@@ -1,9 +1,0 @@
-apiVersion: ksflow.io/v1alpha1
-kind: KafkaConfig
-metadata:
-  name: default
-spec:
-  topicPrefix: io.ksflow.quickstart
-  configs:
-    bootstrap.servers: ksflow-quickstart-kafka:9092
-    security.protocol: PLAINTEXT

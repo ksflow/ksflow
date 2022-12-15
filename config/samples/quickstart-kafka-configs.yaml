@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # this is the name that the ksflow controller looks for by default
+  name: ksflow-kafka-configs
+data:
+  admin.properties: |
+    # jvm: https://kafka.apache.org/documentation/#adminclientconfigs
+    # non-jvm: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+    bootstrap.servers=ksflow-quickstart-kafka:9092

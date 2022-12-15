@@ -27,10 +27,6 @@ spec:
     - jsonPath: .spec.reclaimPolicy
       name: ReclaimPolicy
       type: string
-    - jsonPath: .status.fullTopicName
-      name: TopicName
-      priority: 10
-      type: string
     - jsonPath: .status.phase
       name: Status
       type: string
@@ -64,8 +60,38 @@ spec:
                 additionalProperties:
                   type: string
                 description: 'Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
-                  All values are specified as strings, since support for floating-point
-                  varies across languages'
+                  All values are specified as strings'
+                type: object
+              configsFrom:
+                default:
+                  configMapKeyRef:
+                    key: topic.properties
+                    name: ksflow-kafka-configs
+                    optional: true
+                description: ConfigsFrom is the source of the configs' value. Expects
+                  a properties file containing the configs Values defined in Configs
+                  with a duplicate key will take precedence.
+                properties:
+                  configMapKeyRef:
+                    description: 'Selects the key of a ConfigMap containing the configs
+                      for the topic in property file format, see: https://kafka.apache.org/documentation/#topicconfigs
+                      Same behavior as in a container, see: https://github.com/kubernetes/website/blob/snapshot-initial-v1.26/content/en/examples/pods/pod-single-configmap-env-variable.yaml#L14'
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                      optional:
+                        description: Specify whether the ConfigMap or its key must
+                          be defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
                 type: object
               partitions:
                 description: Partitions is the number of partitions in the topic.
@@ -89,59 +115,20 @@ spec:
           status:
             description: KafkaTopicStatus defines the observed state of KafkaTopic
             properties:
-              configs:
-                additionalProperties:
-                  type: string
-                description: 'Configs are the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
-                  All values are specified as strings, since support for floating-point
-                  varies across languages'
-                type: object
-              fullTopicName:
-                type: string
-              kafkaConfigs:
-                description: KafkaConfigs defines the Kafka configs for connecting
-                  to the Kafka Cluster configs match what kafka clients use to connect.
-                properties:
-                  bootstrap.servers:
-                    description: The "bootstrap.servers" kafka config for connecting
-                      to the cluster. For example "host1:port1,host2:port2".
-                    pattern: ^([^,:]+):(\d+)(,([^,:]+):(\d+))*$
-                    type: string
-                  security.protocol:
-                    description: The "security.protocol" kafka config for connecting
-                      to the cluster, must be "PLAINTEXT" or "SSL".
-                    enum:
-                    - PLAINTEXT
-                    - SSL
-                    type: string
-                required:
-                - bootstrap.servers
-                - security.protocol
-                type: object
               lastUpdated:
                 format: date-time
                 type: string
-              partitions:
-                description: Partitions is the number of partitions in the topic.
-                format: int32
-                minimum: 1
-                type: integer
               phase:
                 description: KafkaTopicPhase defines the phase of the KafkaTopic
                 enum:
                 - ""
                 - Creating
+                - Deleting
                 - Available
                 - Failed
-                - Deleting
                 type: string
               reason:
                 type: string
-              replicationFactor:
-                description: ReplicationFactor is the number of replicas for each
-                  of the topic's partitions.
-                minimum: 1
-                type: integer
             type: object
         type: object
     served: true
