@@ -1,0 +1,16 @@
+componentConfig: true
+domain: io
+layout:
+- go.kubebuilder.io/v3
+projectName: ksflow
+repo: github.com/ksflow/ksflow
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: io
+  group: ksflow
+  kind: KsflowConfig
+  path: github.com/ksflow/ksflow/api/v1alpha1
+  version: v1alpha1
+version: "3"

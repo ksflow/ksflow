@@ -1,0 +1,6 @@
+.vscode/
+.DS_Store
+*.iml
+.idea/
+bin/*
+cover.out
