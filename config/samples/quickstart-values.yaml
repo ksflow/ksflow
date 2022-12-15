@@ -1,0 +1,9 @@
+crds:
+  keep: false
+controller:
+  config:
+    kafka:
+      bootstrapServers:
+      - broker1.ksflow-quickstart-kafka:9092
+      tls:
+        secret: quickstart-controller-certs

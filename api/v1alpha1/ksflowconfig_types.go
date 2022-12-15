@@ -22,15 +22,15 @@ import (
 )
 
 type KafkaTLSConfig struct {
-	// ClientCertificate is the path to the file holding the client-side TLS certificate to use
-	ClientCertificate string `json:"clientCertificate"`
+	// CertFilePath is the path to the file holding the client-side TLS certificate to use
+	CertFilePath string `json:"cert"`
 
-	// PrivateKey is the path to the file holding the client’s private key
-	PrivateKey string `json:"privateKey"`
+	// KeyFilePath is the path to the file holding the client’s private key
+	KeyFilePath string `json:"key"`
 
-	// CACertificates is the path to the file containing certificate authority certificates to use
+	// CAFilePath is the path to the file containing certificate authority certificates to use
 	// in verifying a presented server certificate
-	CACertificates string `json:"caCertificates"`
+	CAFilePath string `json:"ca"`
 }
 
 type KafkaConfig struct {
