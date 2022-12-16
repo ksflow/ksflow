@@ -1,0 +1,293 @@
+############## Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ksflow-quickstart
+
+############## Certs
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-ca-issuer
+  namespace: ksflow-quickstart
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: selfsigned-ca
+  namespace: ksflow-quickstart
+spec:
+  isCA: true
+  commonName: selfsigned-ca
+  secretName: selfsigned-ca-root-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-ca-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: cert-issuer
+  namespace: ksflow-quickstart
+spec:
+  ca:
+    secretName: selfsigned-ca-root-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kafka-server-cert-password
+  namespace: ksflow-quickstart
+type: Opaque
+stringData:
+  password: "password"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kafka-server-cert
+  namespace: ksflow-quickstart
+spec:
+  secretName: kafka-server-cert
+  privateKey:
+    rotationPolicy: Always
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef:
+        name: kafka-server-cert-password
+        key: password
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: kafka-server-cert-password
+        key: password
+  dnsNames:
+  - kafka.ksflow-quickstart.svc.cluster.local
+  issuerRef:
+    name: cert-issuer
+    kind: Issuer
+    group: cert-manager.io
+
+############## Kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: ksflow-quickstart
+spec:
+  ports:
+  - protocol: TCP
+    port: 9092
+  selector:
+    app: kafka
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: ksflow-quickstart
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: bitnami/kafka:3.3.1-debian-11-r19
+        env:
+        - name: KAFKA_ENABLE_KRAFT
+          value: "yes"
+        - name: KAFKA_CFG_PROCESS_ROLES
+          value: "broker,controller"
+        - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+          value: "CONTROLLER"
+        - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+          value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+        - name: KAFKA_CFG_ADVERTISED_LISTENERS
+          value: "PLAINTEXT://127.0.0.1:9092"
+        - name: KAFKA_CFG_LISTENERS
+          value: "PLAINTEXT://:9092,CONTROLLER://:9093"
+        - name: KAFKA_BROKER_ID
+          value: "1"
+        - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+          value: "1@127.0.0.1:9093"
+        - name: ALLOW_PLAINTEXT_LISTENER
+          value: "yes"
+        ports:
+        - containerPort: 9092
+        livenessProbe:
+          tcpSocket:
+            port: 9092
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            cpu: 200m
+
+############## Ksflow
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ksflow-controller
+  namespace: ksflow-quickstart
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ksflow-controller
+  namespace: ksflow-quickstart
+data:
+  controller-config.yaml: |
+    apiVersion: ksflow.io/v1alpha1
+    kind: KsflowConfig
+    kafka:
+      bootstrapServers:
+      - kafka.ksflow-quickstart.svc.cluster.local:9092
+      tls:
+        cert: "/kafka-certs/tls.crt"
+        key: "/kafka-certs/tls.key"
+        ca: "/kafka-certs/ca.crt"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ksflow-controller
+  namespace: ksflow-quickstart
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ksflow-controller
+subjects:
+  - kind: ServiceAccount
+    name: ksflow-controller
+    namespace: ksflow-quickstart
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ksflow-controller
+  namespace: ksflow-quickstart
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ksflow-controller
+  template:
+    metadata:
+      labels:
+        app: ksflow-controller
+    spec:
+      serviceAccountName: ksflow-controller
+      containers:
+      - name: controller
+        image: "ksflow/ksflow:latest"
+        imagePullPolicy: IfNotPresent
+        args:
+        - "--config=/etc/ksflow/controller-config.yaml"
+        volumeMounts:
+        - mountPath: /etc/ksflow
+          name: controller-config
+          readOnly: true
+        - mountPath: /kafka-certs
+          name: kafka-certs
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+      volumes:
+      - configMap:
+          name: ksflow-controller
+        name: controller-config
+      - secret:
+          secretName: "selfsigned-ca-root-secret"
+        name: kafka-certs
+
+############## Ksflow CRDs
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ksflow-controller
+  namespace: ksflow-quickstart
+rules:
+  - apiGroups:
+      - ksflow.io
+    resources:
+      - kafkatopics
+      - kafkatopics/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: kafkatopics.ksflow.io
+spec:
+  group: ksflow.io
+  names:
+    kind: KafkaTopic
+    listKind: KafkaTopicList
+    plural: kafkatopics
+    singular: kafkatopic
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: KafkaTopic is the Schema for the kafkatopics API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: KafkaTopicSpec defines the desired state of KafkaTopic
+              properties:
+                foo:
+                  description: Foo is an example field of KafkaTopic. Edit kafkatopic_types.go
+                    to remove/update
+                  type: string
+              type: object
+            status:
+              description: KafkaTopicStatus defines the observed state of KafkaTopic
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

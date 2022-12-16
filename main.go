@@ -31,7 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	ksflowv1alpha1 "github.com/ksflow/ksflow/api/v1alpha1"
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
+	"github.com/ksflow/ksflow/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -44,6 +46,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(ksfv1.AddToScheme(scheme))
+	utilruntime.Must(ksflowv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -82,6 +85,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.KafkaTopicReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KafkaTopic")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
