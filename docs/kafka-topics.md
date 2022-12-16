@@ -1,6 +1,6 @@
 ## Kafka Topics
 
-### KafkaTopic
+### KafkaTopic (kt)
 
 A `KafkaTopic` defines a topic in the Kafka cluster that the ksflow controller is configured to use.
 Below is an example KafkaTopic.
@@ -42,7 +42,7 @@ The above example will therefore create a topic named "my-ns.my-topic".
 
 Both the KafkaTopic name and namespace must conform to [RFC 1035](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names).
 
-### ClusterKafkaTopic
+### ClusterKafkaTopic (ckt)
 
 A `ClusterKafkaTopic` is the same as a KafkaTopic, the only difference being that it has a cluster scope.
 Below is a minimal example ClusterKafkaTopic.
