@@ -43,34 +43,51 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: kafka-server-cert-password
+  name: kafka-cert-password
   namespace: ksflow-quickstart
-type: Opaque
 stringData:
   password: "password"
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: kafka-server-cert
+  name: kafka-cert
   namespace: ksflow-quickstart
 spec:
-  secretName: kafka-server-cert
+  secretName: kafka-cert
   privateKey:
     rotationPolicy: Always
+  commonName: kafka.ksflow-quickstart.svc.cluster.local
   keystores:
     jks:
       create: true
       passwordSecretRef:
-        name: kafka-server-cert-password
+        name: kafka-cert-password
         key: password
     pkcs12:
       create: true
       passwordSecretRef:
-        name: kafka-server-cert-password
+        name: kafka-cert-password
         key: password
   dnsNames:
   - kafka.ksflow-quickstart.svc.cluster.local
+  issuerRef:
+    name: cert-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ksflow-controller-cert
+  namespace: ksflow-quickstart
+spec:
+  secretName: ksflow-controller-cert
+  privateKey:
+    rotationPolicy: Always
+  commonName: ksflow-controller.ksflow-quickstart.svc.cluster.local
+  dnsNames:
+  - ksflow-controller.ksflow-quickstart.svc.cluster.local
   issuerRef:
     name: cert-issuer
     kind: Issuer
@@ -87,6 +104,10 @@ spec:
   ports:
   - protocol: TCP
     port: 9092
+    name: main
+  - protocol: TCP
+    port: 9093
+    name: controller
   selector:
     app: kafka
 ---
@@ -110,26 +131,59 @@ spec:
       - name: kafka
         image: bitnami/kafka:3.3.1-debian-11-r19
         env:
+        - name: BITNAMI_DEBUG
+          value: "yes"
         - name: KAFKA_ENABLE_KRAFT
           value: "yes"
+        - name: KAFKA_BROKER_ID
+          value: "1"
         - name: KAFKA_CFG_PROCESS_ROLES
           value: "broker,controller"
         - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
           value: "CONTROLLER"
         - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
-          value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+          value: "SSL:SSL,CONTROLLER:SSL"
         - name: KAFKA_CFG_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://127.0.0.1:9092"
+          value: "SSL://kafka.ksflow-quickstart.svc.cluster.local:9092"
+        - name: KAFKA_CFG_EARLY_START_LISTENERS
+          value: CONTROLLER
+        # TODO: configure ksflow controller as a non-superuser ACL administrator instead
+        # ref: https://docs.confluent.io/platform/current/kafka/authorization.html#creating-non-super-user-acl-administrators
+        - name: KAFKA_CFG_SUPER_USERS
+          value: "User:CN=kafka.ksflow-quickstart.svc.cluster.local;User:CN=ksflow-controller.ksflow-quickstart.svc.cluster.local"
         - name: KAFKA_CFG_LISTENERS
-          value: "PLAINTEXT://:9092,CONTROLLER://:9093"
-        - name: KAFKA_BROKER_ID
-          value: "1"
+          value: "SSL://:9092,CONTROLLER://:9093"
+        - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+          value: "SSL"
         - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
-          value: "1@127.0.0.1:9093"
-        - name: ALLOW_PLAINTEXT_LISTENER
-          value: "yes"
+          value: "1@kafka.ksflow-quickstart.svc.cluster.local:9093"
+        - name: KAFKA_CFG_SSL_KEYSTORE_TYPE
+          value: "PKCS12"
+        - name: KAFKA_CFG_SSL_KEYSTORE_LOCATION
+          value: "/opt/bitnami/kafka/config/certs/kafka.keystore.p12"
+        - name: KAFKA_CFG_SSL_KEYSTORE_PASSWORD
+          value: "password"
+        - name: KAFKA_CFG_SSL_KEY_PASSWORD
+          value: "password"
+        - name: KAFKA_CFG_SSL_TRUSTSTORE_TYPE
+          value: "PKCS12"
+        - name: KAFKA_CFG_SSL_TRUSTSTORE_LOCATION
+          value: "/opt/bitnami/kafka/config/certs/kafka.truststore.p12"
+        - name: KAFKA_CFG_SSL_TRUSTSTORE_PASSWORD
+          value: "password"
+        - name: KAFKA_CFG_SSL_ENABLED_PROTOCOLS
+          value: "TLSv1.2"
+        - name: KAFKA_CFG_SSL_PROTOCOL
+          value: "TLSv1.2"
+        - name: KAFKA_CFG_SSL_CLIENT_AUTH
+          value: "required"
+        - name: KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND
+          value: "false"
         ports:
         - containerPort: 9092
+          name: main
+        - containerPort: 9093
+          name: controller
         livenessProbe:
           tcpSocket:
             port: 9092
@@ -138,6 +192,24 @@ spec:
             memory: 256Mi
           requests:
             cpu: 200m
+        volumeMounts:
+        - mountPath: /opt/bitnami/kafka/config/certs/kafka.truststore.p12
+          subPath: truststore.p12
+          name: kafka-cert
+        - mountPath: /opt/bitnami/kafka/config/certs/kafka.keystore.p12
+          subPath: keystore.p12
+          name: kafka-cert
+        # JKS files are unused, but bitnami docker does checks on these & doesn't allow setting checks for P12
+        - mountPath: /opt/bitnami/kafka/config/certs/kafka.truststore.jks
+          subPath: truststore.jks
+          name: kafka-cert
+        - mountPath: /opt/bitnami/kafka/config/certs/kafka.keystore.jks
+          subPath: keystore.jks
+          name: kafka-cert
+      volumes:
+      - secret:
+          secretName: kafka-cert
+        name: kafka-cert
 
 ############## Ksflow
 ---
@@ -197,10 +269,10 @@ spec:
       serviceAccountName: ksflow-controller
       containers:
       - name: controller
-        image: "ksflow/ksflow:latest"
+        image: ksflow/ksflow:latest
         imagePullPolicy: IfNotPresent
         args:
-        - "--config=/etc/ksflow/controller-config.yaml"
+        - --config=/etc/ksflow/controller-config.yaml
         volumeMounts:
         - mountPath: /etc/ksflow
           name: controller-config
@@ -212,12 +284,17 @@ spec:
           httpGet:
             path: /healthz
             port: 8081
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            cpu: 50m
       volumes:
       - configMap:
           name: ksflow-controller
         name: controller-config
       - secret:
-          secretName: "selfsigned-ca-root-secret"
+          secretName: ksflow-controller-cert
         name: kafka-certs
 
 ############## Ksflow CRDs
