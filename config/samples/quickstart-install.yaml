@@ -111,6 +111,24 @@ spec:
   selector:
     app: kafka
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-config
+  namespace: ksflow-quickstart
+data:
+  # for easy use within container using kubectl exec (i.e. listing topics, acls, etc.)
+  admin.properties: |
+    bootstrap.servers=kafka.ksflow-quickstart.svc.cluster.local:9092
+    security.protocol=SSL
+    ssl.keystore.type=PKCS12
+    ssl.keystore.location=/opt/bitnami/kafka/config/certs/kafka.keystore.p12
+    ssl.keystore.password=password
+    ssl.key.password=password
+    ssl.truststore.type=PKCS12
+    ssl.truststore.location=/opt/bitnami/kafka/config/certs/kafka.truststore.p12
+    ssl.truststore.password=password
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -199,6 +217,9 @@ spec:
         - mountPath: /opt/bitnami/kafka/config/certs/kafka.keystore.p12
           subPath: keystore.p12
           name: kafka-cert
+        - mountPath: /opt/bitnami/kafka/config/admin.properties
+          subPath: admin.properties
+          name: kafka-config
         # JKS files are unused, but bitnami docker does checks on these & doesn't allow setting checks for P12
         - mountPath: /opt/bitnami/kafka/config/certs/kafka.truststore.jks
           subPath: truststore.jks
@@ -210,6 +231,9 @@ spec:
       - secret:
           secretName: kafka-cert
         name: kafka-cert
+      - configMap:
+          name: kafka-config
+        name: kafka-config
 
 ############## Ksflow
 ---

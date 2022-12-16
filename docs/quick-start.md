@@ -22,7 +22,7 @@ kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/sam
 kubectl get kt --watch
 
 # verify the topic was created in kafka
-kubectl exec deploy/ksflow-quickstart-kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+kubectl exec -n ksflow-quickstart deploy/kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka.ksflow-quickstart.svc.cluster.local:9092 --list --command-config /opt/bitnami/kafka/config/admin.properties"
 ```
 
 #### Delete the Topic
@@ -31,7 +31,7 @@ kubectl exec deploy/ksflow-quickstart-kafka -- /bin/sh -c "/opt/bitnami/kafka/bi
 kubectl delete kt quickstart
 
 # verify the topic was deleted from kafka
-kubectl exec deploy/ksflow-quickstart-kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+kubectl exec -n ksflow-quickstart deploy/kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka.ksflow-quickstart.svc.cluster.local:9092 --list --command-config /opt/bitnami/kafka/config/admin.properties"
 ```
 
 #### Uninstall
