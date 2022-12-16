@@ -1,11 +1,11 @@
 apiVersion: ksflow.io/v1alpha1
-kind: KsflowConfig
+kind: ClusterKafkaTopic
 metadata:
   labels:
-    app.kubernetes.io/name: ksflowconfig
-    app.kubernetes.io/instance: ksflowconfig-sample
+    app.kubernetes.io/name: clusterkafkatopic
+    app.kubernetes.io/instance: clusterkafkatopic-sample
     app.kubernetes.io/part-of: ksflow
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: ksflow
-  name: ksflowconfig-sample
+  name: clusterkafkatopic-sample
 spec: {}

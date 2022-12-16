@@ -20,26 +20,53 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// FullTopicName is the actual Kafka topic name used on the Kafka cluster
+func (kt *KafkaTopic) FullTopicName() string {
+	return kt.Namespace + "." + kt.Name
+}
 
 // KafkaTopicSpec defines the desired state of KafkaTopic
 type KafkaTopicSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// +kubebuilder:default:=Delete
 
-	// Foo is an example field of KafkaTopic. Edit kafkatopic_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// ReclaimPolicy defines what should happen to the underlying kafka topic if the KafkaTopic is deleted.
+	// +optional
+	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
+
+	// +kubebuilder:validation:Minimum=1
+
+	// Partitions is the number of partitions in the topic.
+	// +optional
+	Partitions *int32 `json:"partitions,omitempty"`
+
+	// +kubebuilder:validation:Minimum=1
+
+	// ReplicationFactor is the number of replicas for each of the topic's partitions.
+	// +optional
+	ReplicationFactor *int16 `json:"replicationFactor,omitempty"`
+
+	// Configs contains the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
+	// All values are specified as strings
+	// +optional
+	Configs map[string]*string `json:"configs,omitempty"`
 }
 
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Phase       KafkaTopicPhase `json:"phase,omitempty"`
+	Reason      string          `json:"reason,omitempty"`
+	LastUpdated metav1.Time     `json:"lastUpdated,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=kt
+// +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.spec.partitions`
+// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicationFactor`
+// +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.spec.reclaimPolicy`
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
 // KafkaTopic is the Schema for the kafkatopics API
 type KafkaTopic struct {

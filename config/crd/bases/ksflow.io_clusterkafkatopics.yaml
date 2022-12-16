@@ -5,17 +5,17 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: kafkatopics.ksflow.io
+  name: clusterkafkatopics.ksflow.io
 spec:
   group: ksflow.io
   names:
-    kind: KafkaTopic
-    listKind: KafkaTopicList
-    plural: kafkatopics
+    kind: ClusterKafkaTopic
+    listKind: ClusterKafkaTopicList
+    plural: clusterkafkatopics
     shortNames:
     - kt
-    singular: kafkatopic
-  scope: Namespaced
+    singular: clusterkafkatopic
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.partitions
@@ -39,7 +39,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: KafkaTopic is the Schema for the kafkatopics API
+        description: ClusterKafkaTopic is the Schema for the clusterkafkatopics API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
