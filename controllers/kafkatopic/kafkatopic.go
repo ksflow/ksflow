@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package kafkatopic
 
 import (
 	"context"
@@ -32,38 +32,93 @@ import (
 )
 
 const (
-	KafkaTopicFinalizerName = "kafka-topic.ksflow.io/finalizer"
+	FinalizerName = "kafka-topic.ksflow.io/finalizer"
 )
 
+// doReconcile handles reconciliation of KafkaTopic and ClusterKafkaTopics
+func doReconcile(ctx context.Context,
+	meta *metav1.ObjectMeta,
+	status *ksfv1.KafkaTopicStatus,
+	spec *ksfv1.KafkaTopicSpec,
+	reclaimPolicy ksfv1.KafkaTopicReclaimPolicy,
+	o client.Object,
+	topicName string,
+	kadmClient *kadm.Client) error {
+
+	status.Phase = ksfv1.KafkaTopicPhaseUnknown
+
+	// Topic deletion & finalizers
+	if !meta.DeletionTimestamp.IsZero() {
+		status.Phase = ksfv1.KafkaTopicPhaseDeleting
+	}
+	ret, err := handleDeletionAndFinalizers(ctx, meta, reclaimPolicy, o, topicName, kadmClient)
+	if err != nil {
+		status.Phase = ksfv1.KafkaTopicPhaseError
+		return err
+	}
+	if ret {
+		return nil
+	}
+
+	// Topic create or update
+	if err = createOrUpdateTopic(ctx, &spec.KafkaTopicInClusterConfiguration, topicName, kadmClient); err != nil {
+		return err
+	}
+	if err != nil {
+		status.Phase = ksfv1.KafkaTopicPhaseError
+		return err
+	}
+
+	// Update status
+	var ticc *ksfv1.KafkaTopicInClusterConfiguration
+	ticc, err = getTopicInClusterConfiguration(ctx, topicName, kadmClient)
+	if err != nil {
+		status.Phase = ksfv1.KafkaTopicPhaseError
+		return err
+	}
+	if ticc != nil {
+		status.KafkaTopicInClusterConfiguration = *ticc
+	}
+
+	status.Phase = ksfv1.KafkaTopicPhaseAvailable
+
+	return nil
+}
+
+// handleDeletionAndFinalizers updates finalizers if necessary and handles deletion of kafka topics
+// returns false if processing should continue, true if we should finish reconcile
 func handleDeletionAndFinalizers(ctx context.Context,
 	meta *metav1.ObjectMeta,
 	reclaimPolicy ksfv1.KafkaTopicReclaimPolicy,
 	o client.Object,
 	topicName string,
-	kadmClient *kadm.Client) (finalizersUpdated bool, err error) {
+	kadmClient *kadm.Client) (bool, error) {
 
 	if meta.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(o, KafkaTopicFinalizerName) {
-			return controllerutil.AddFinalizer(o, KafkaTopicFinalizerName), nil
+		if !controllerutil.ContainsFinalizer(o, FinalizerName) {
+			controllerutil.AddFinalizer(o, FinalizerName)
 		}
 	} else {
-		if controllerutil.ContainsFinalizer(o, KafkaTopicFinalizerName) {
+		// The object is being deleted
+		if controllerutil.ContainsFinalizer(o, FinalizerName) {
+			// our finalizer is present, so lets handle any external dependency
 			if reclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
-				if err = deleteTopicFromKafka(ctx, topicName, kadmClient); err != nil {
-					return false, err
+				if err := deleteTopicFromKafka(ctx, topicName, kadmClient); err != nil {
+					return true, err
 				}
 			}
-			var exists bool
-			exists, err = topicExists(ctx, topicName, kadmClient)
+			exists, err := topicExists(ctx, topicName, kadmClient)
 			if err != nil {
-				return false, err
+				return true, err
 			}
 			if exists {
 				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
-				return false, errors.New("waiting for topic to finish deleting")
+				return true, errors.New("waiting for topic to finish deleting")
 			}
-			return controllerutil.RemoveFinalizer(o, KafkaTopicFinalizerName), nil
+			controllerutil.RemoveFinalizer(o, FinalizerName)
 		}
+		// Stop reconciliation as the item is being deleted
+		return true, nil
 	}
 	return false, nil
 }

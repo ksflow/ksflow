@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package kafkatopic
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/twmb/franz-go/pkg/kadm"
-	"github.com/twmb/franz-go/pkg/kgo"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -51,70 +51,36 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	return ctrl.Result{}, r.doReconcile(ctx, &kt)
-}
-
-// same as KafkaTopicReconciler's doReconcile... use generics?
-func (r *ClusterKafkaTopicReconciler) doReconcile(ctx context.Context, kt *ksfv1.ClusterKafkaTopic) (err error) {
-	// Update status regardless of outcome
-	defer func() {
-		kt.Status.LastUpdated = metav1.Now()
-		if err != nil {
-			kt.Status.Phase = ksfv1.KafkaTopicPhaseError
-			kt.Status.Reason = err.Error()
-		} else {
-			kt.Status.Phase = ksfv1.KafkaTopicPhaseSuccess
-			kt.Status.Reason = ""
-		}
-		if statusErr := r.Client.Status().Update(ctx, kt); statusErr != nil {
-			if err != nil {
-				err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
-			} else {
-				err = fmt.Errorf("failed to update status: %v", statusErr)
-			}
-		}
-	}()
-
 	// Create Kafka client
-	var kgoClient *kgo.Client
-	kgoClient, err = r.KafkaConfig.NewClient()
+	kgoClient, err := r.KafkaConfig.NewClient()
 	if err != nil {
-		return err
+		logger.Error(err, "unable to create Kafka client")
+		return ctrl.Result{}, err
 	}
 	defer kgoClient.Close()
 	kadmClient := kadm.NewClient(kgoClient)
 
-	// Topic deletion & finalizers
-	var needsUpdate bool
-	needsUpdate, err = handleDeletionAndFinalizers(ctx, &kt.ObjectMeta, *kt.Spec.ReclaimPolicy, kt, kt.FullTopicName(), kadmClient)
-	if err != nil {
-		return err
-	}
-	if !kt.ObjectMeta.DeletionTimestamp.IsZero() {
-		return nil
-	}
-	if needsUpdate {
-		if err = r.Update(ctx, kt); err != nil {
-			return err
+	// Reconcile, update spec w/finalizers, update status, return
+	ktCopy := kt.DeepCopy()
+	err = doReconcile(ctx, &ktCopy.ObjectMeta, &ktCopy.Status, &kt.Spec, *kt.Spec.ReclaimPolicy, &kt, kt.FullTopicName(), kadmClient)
+	if !equality.Semantic.DeepEqual(kt.Finalizers, ktCopy.Finalizers) {
+		if specErr := r.Client.Update(ctx, ktCopy); specErr != nil {
+			if err != nil {
+				err = fmt.Errorf("failed while updating spec: %v: %v", specErr, err)
+			} else {
+				err = fmt.Errorf("failed to update spec: %v", specErr)
+			}
 		}
 	}
-
-	// Topic create or update
-	if err = createOrUpdateTopic(ctx, &kt.Spec.KafkaTopicInClusterConfiguration, kt.FullTopicName(), kadmClient); err != nil {
-		return err
+	kt.Status.LastUpdated = metav1.Now()
+	if statusErr := r.Client.Status().Update(ctx, ktCopy); statusErr != nil {
+		if err != nil {
+			err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
+		} else {
+			err = fmt.Errorf("failed to update status: %v", statusErr)
+		}
 	}
-
-	// Update status
-	var ticc *ksfv1.KafkaTopicInClusterConfiguration
-	ticc, err = getTopicInClusterConfiguration(ctx, kt.FullTopicName(), kadmClient)
-	if err != nil {
-		return err
-	}
-	if ticc != nil {
-		kt.Status.KafkaTopicInClusterConfiguration = *ticc
-	}
-
-	return nil
+	return ctrl.Result{}, err
 }
 
 func (r *ClusterKafkaTopicReconciler) SetupWithManager(mgr ctrl.Manager) error {

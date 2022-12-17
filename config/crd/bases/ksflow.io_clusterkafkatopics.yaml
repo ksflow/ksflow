@@ -102,8 +102,10 @@ spec:
                 description: KafkaTopicPhase defines the phase of the KafkaTopic
                 enum:
                 - ""
+                - Creating
+                - Deleting
+                - Available
                 - Error
-                - Success
                 type: string
               reason:
                 type: string
