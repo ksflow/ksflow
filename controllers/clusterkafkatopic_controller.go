@@ -22,6 +22,7 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,7 +58,15 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *ClusterKafkaTopicReconciler) doReconcile(ctx context.Context, kt *ksfv1.ClusterKafkaTopic) (err error) {
 	// Update status regardless of outcome
 	defer func() {
-		if statusErr := r.updateStatus(ctx, kt.Name); statusErr != nil {
+		kt.Status.LastUpdated = metav1.Now()
+		if err != nil {
+			kt.Status.Phase = ksfv1.KafkaTopicPhaseError
+			kt.Status.Reason = err.Error()
+		} else {
+			kt.Status.Phase = ksfv1.KafkaTopicPhaseSuccess
+			kt.Status.Reason = ""
+		}
+		if statusErr := r.Client.Status().Update(ctx, kt); statusErr != nil {
 			if err != nil {
 				err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
 			} else {
@@ -76,7 +85,8 @@ func (r *ClusterKafkaTopicReconciler) doReconcile(ctx context.Context, kt *ksfv1
 	kadmClient := kadm.NewClient(kgoClient)
 
 	// Topic deletion & finalizers
-	needsUpdate, err := handleDeletionAndFinalizers(ctx, &kt.ObjectMeta, *kt.Spec.ReclaimPolicy, kt, kt.FullTopicName(), kadmClient)
+	var needsUpdate bool
+	needsUpdate, err = handleDeletionAndFinalizers(ctx, &kt.ObjectMeta, *kt.Spec.ReclaimPolicy, kt, kt.FullTopicName(), kadmClient)
 	if err != nil {
 		return err
 	}
@@ -89,7 +99,22 @@ func (r *ClusterKafkaTopicReconciler) doReconcile(ctx context.Context, kt *ksfv1
 		}
 	}
 
-	return createOrUpdateTopic(ctx, &kt.Spec.KafkaTopicInClusterConfiguration, kt.FullTopicName(), kadmClient)
+	// Topic create or update
+	if err = createOrUpdateTopic(ctx, &kt.Spec.KafkaTopicInClusterConfiguration, kt.FullTopicName(), kadmClient); err != nil {
+		return err
+	}
+
+	// Update status
+	var ticc *ksfv1.KafkaTopicInClusterConfiguration
+	ticc, err = getTopicInClusterConfiguration(ctx, kt.FullTopicName(), kadmClient)
+	if err != nil {
+		return err
+	}
+	if ticc != nil {
+		kt.Status.KafkaTopicInClusterConfiguration = *ticc
+	}
+
+	return nil
 }
 
 func (r *ClusterKafkaTopicReconciler) SetupWithManager(mgr ctrl.Manager) error {

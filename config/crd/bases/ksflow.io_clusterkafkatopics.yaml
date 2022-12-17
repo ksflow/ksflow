@@ -84,20 +84,34 @@ spec:
           status:
             description: KafkaTopicStatus defines the observed state of KafkaTopic
             properties:
+              configs:
+                additionalProperties:
+                  type: string
+                description: 'Configs contains the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
+                  All values are specified as strings'
+                type: object
               lastUpdated:
                 format: date-time
                 type: string
+              partitions:
+                description: Partitions is the number of partitions in the topic.
+                format: int32
+                minimum: 1
+                type: integer
               phase:
                 description: KafkaTopicPhase defines the phase of the KafkaTopic
                 enum:
                 - ""
-                - Creating
-                - Deleting
-                - Available
-                - Failed
+                - Error
+                - Success
                 type: string
               reason:
                 type: string
+              replicationFactor:
+                description: ReplicationFactor is the number of replicas for each
+                  of the topic's partitions.
+                minimum: 1
+                type: integer
             type: object
         type: object
     served: true

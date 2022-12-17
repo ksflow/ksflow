@@ -16,17 +16,15 @@ limitations under the License.
 
 package v1alpha1
 
-// +kubebuilder:validation:Enum="";Creating;Deleting;Available;Failed
+// +kubebuilder:validation:Enum="";Error;Success
 
 // KafkaTopicPhase defines the phase of the KafkaTopic
 type KafkaTopicPhase string
 
 const (
-	KafkaTopicPhaseUnknown   KafkaTopicPhase = ""
-	KafkaTopicPhaseCreating  KafkaTopicPhase = "Creating"
-	KafkaTopicPhaseDeleting  KafkaTopicPhase = "Deleting"
-	KafkaTopicPhaseAvailable KafkaTopicPhase = "Available"
-	KafkaTopicPhaseFailed    KafkaTopicPhase = "Failed"
+	KafkaTopicPhaseUnknown KafkaTopicPhase = ""
+	KafkaTopicPhaseSuccess KafkaTopicPhase = "Success"
+	KafkaTopicPhaseError   KafkaTopicPhase = "Error"
 )
 
 // +kubebuilder:validation:Enum=Delete;Retain
