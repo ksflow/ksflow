@@ -72,7 +72,7 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			}
 		}
 	}
-	kt.Status.LastUpdated = metav1.Now()
+	ktc.Status.LastUpdated = metav1.Now()
 	if statusErr := r.Client.Status().Update(ctx, ktcCopy); statusErr != nil {
 		if err != nil {
 			err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
