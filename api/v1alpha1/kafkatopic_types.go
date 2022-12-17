@@ -25,14 +25,8 @@ func (kt *KafkaTopic) FullTopicName() string {
 	return kt.Namespace + "." + kt.Name
 }
 
-// KafkaTopicSpec defines the desired state of KafkaTopic
-type KafkaTopicSpec struct {
-	// +kubebuilder:default:=Delete
-
-	// ReclaimPolicy defines what should happen to the underlying kafka topic if the KafkaTopic is deleted.
-	// +optional
-	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
-
+// KafkaTopicInClusterConfiguration is the part of the KafkaTopicSpec that maps directly to a real Kafka topic
+type KafkaTopicInClusterConfiguration struct {
 	// +kubebuilder:validation:Minimum=1
 
 	// Partitions is the number of partitions in the topic.
@@ -51,8 +45,23 @@ type KafkaTopicSpec struct {
 	Configs map[string]*string `json:"configs,omitempty"`
 }
 
+// KafkaTopicSpec defines the desired state of KafkaTopic
+type KafkaTopicSpec struct {
+
+	// +optional
+	KafkaTopicInClusterConfiguration `json:",inline"`
+
+	// +kubebuilder:default:=Delete
+
+	// ReclaimPolicy defines what should happen to the underlying kafka topic if the KafkaTopic is deleted.
+	// +optional
+	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
+}
+
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
+	KafkaTopicInClusterConfiguration `json:",inline"`
+
 	Phase       KafkaTopicPhase `json:"phase,omitempty"`
 	Reason      string          `json:"reason,omitempty"`
 	LastUpdated metav1.Time     `json:"lastUpdated,omitempty"`

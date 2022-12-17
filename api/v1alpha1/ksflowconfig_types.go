@@ -17,9 +17,26 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/tlscfg"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
+
+// NewClient retrieves a Kafka client from the KafkaConfig
+func (kc *KafkaConfig) NewClient() (*kgo.Client, error) {
+	tc, err := tlscfg.New(
+		tlscfg.WithDiskCA(kc.KafkaTLSConfig.CAFilePath, tlscfg.ForClient),
+		tlscfg.WithDiskKeyPair(kc.KafkaTLSConfig.CertFilePath, kc.KafkaTLSConfig.KeyFilePath),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return kgo.NewClient(
+		kgo.SeedBrokers(kc.BootstrapServers...),
+		kgo.DialTLSConfig(tc),
+	)
+}
 
 type KafkaTLSConfig struct {
 	// CertFilePath is the path to the file holding the client-side TLS certificate to use

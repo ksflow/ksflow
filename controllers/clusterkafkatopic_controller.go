@@ -19,18 +19,20 @@ package controllers
 import (
 	"context"
 
+	"github.com/twmb/franz-go/pkg/kadm"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	ksflowv1alpha1 "github.com/ksflow/ksflow/api/v1alpha1"
+	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
 // ClusterKafkaTopicReconciler reconciles a ClusterKafkaTopic object
 type ClusterKafkaTopicReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme      *runtime.Scheme
+	KafkaConfig ksfv1.KafkaConfig
 }
 
 //+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkatopics,verbs=get;list;watch;create;update;patch;delete
@@ -39,15 +41,24 @@ type ClusterKafkaTopicReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ClusterKafkaTopic object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.1/pkg/reconcile
 func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+
+	// Get ClusterKafkaTopic
+	var kt ksfv1.ClusterKafkaTopic
+	if err := r.Get(ctx, req.NamespacedName, &kt); err != nil {
+		logger.Error(err, "unable to get ClusterKafkaTopic")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Create Kafka client
+	kgoClient, err := r.KafkaConfig.NewClient()
+	if err != nil {
+		logger.Error(err, "unable to create Kafka client")
+		return ctrl.Result{}, err
+	}
+	defer kgoClient.Close()
+	kadmClient := kadm.NewClient(kgoClient)
 
 	// TODO(user): your logic here
 
@@ -57,6 +68,6 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterKafkaTopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ksflowv1alpha1.ClusterKafkaTopic{}).
+		For(&ksfv1.ClusterKafkaTopic{}).
 		Complete(r)
 }
