@@ -67,7 +67,7 @@ var _ = Describe("KafkaConfig controller", func() {
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdKT.Spec.ReclaimPolicy).Should(Equal(ksfv1.KafkaTopicReclaimPolicyDelete))
+			Expect(*createdKT.Spec.ReclaimPolicy).Should(Equal(ksfv1.KafkaTopicReclaimPolicyDelete))
 
 			By("By starting the Kafka broker")
 
