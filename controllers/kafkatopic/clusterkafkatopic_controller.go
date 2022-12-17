@@ -45,8 +45,8 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	logger := log.FromContext(ctx)
 
 	// Get ClusterKafkaTopic
-	var kt ksfv1.ClusterKafkaTopic
-	if err := r.Get(ctx, req.NamespacedName, &kt); err != nil {
+	var ktc ksfv1.ClusterKafkaTopic
+	if err := r.Get(ctx, req.NamespacedName, &ktc); err != nil {
 		logger.Error(err, "unable to get ClusterKafkaTopic")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -61,10 +61,10 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	kadmClient := kadm.NewClient(kgoClient)
 
 	// Reconcile, update spec w/finalizers, update status, return
-	ktCopy := kt.DeepCopy()
-	err = doReconcile(ctx, &ktCopy.ObjectMeta, &ktCopy.Status, &kt.Spec, *kt.Spec.ReclaimPolicy, &kt, kt.FullTopicName(), kadmClient)
-	if !equality.Semantic.DeepEqual(kt.Finalizers, ktCopy.Finalizers) {
-		if specErr := r.Client.Update(ctx, ktCopy); specErr != nil {
+	ktcCopy := ktc.DeepCopy()
+	err = doReconcile(ctx, &ktcCopy.ObjectMeta, &ktcCopy.Status, &ktc.Spec, *ktc.Spec.ReclaimPolicy, &ktc, ktc.FullTopicName(), kadmClient)
+	if !equality.Semantic.DeepEqual(ktc.Finalizers, ktcCopy.Finalizers) {
+		if specErr := r.Client.Update(ctx, ktcCopy); specErr != nil {
 			if err != nil {
 				err = fmt.Errorf("failed while updating spec: %v: %v", specErr, err)
 			} else {
@@ -73,7 +73,7 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}
 	kt.Status.LastUpdated = metav1.Now()
-	if statusErr := r.Client.Status().Update(ctx, ktCopy); statusErr != nil {
+	if statusErr := r.Client.Status().Update(ctx, ktcCopy); statusErr != nil {
 		if err != nil {
 			err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
 		} else {
