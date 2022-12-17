@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -26,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
@@ -76,35 +74,17 @@ func (r *KafkaTopicReconciler) doReconcile(ctx context.Context, kt *ksfv1.KafkaT
 	kadmClient := kadm.NewClient(kgoClient)
 
 	// Topic deletion & finalizers
-	if kt.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(kt, KafkaTopicFinalizerName) {
-			controllerutil.AddFinalizer(kt, KafkaTopicFinalizerName)
-			if err = r.Update(ctx, kt); err != nil {
-				return err
-			}
-		}
-	} else {
-		if controllerutil.ContainsFinalizer(kt, KafkaTopicFinalizerName) {
-			if *kt.Spec.ReclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
-				if err = deleteTopicFromKafka(ctx, kt.FullTopicName(), kadmClient); err != nil {
-					return err
-				}
-			}
-			var exists bool
-			exists, err = topicExists(ctx, kt.FullTopicName(), kadmClient)
-			if err != nil {
-				return err
-			}
-			if exists {
-				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
-				return errors.New("waiting for topic to finish deleting")
-			}
-			controllerutil.RemoveFinalizer(kt, KafkaTopicFinalizerName)
-			if err = r.Update(ctx, kt); err != nil {
-				return err
-			}
-		}
+	needsUpdate, err := handleDeletionAndFinalizers(ctx, &kt.ObjectMeta, *kt.Spec.ReclaimPolicy, kt, kt.FullTopicName(), kadmClient)
+	if err != nil {
+		return err
+	}
+	if !kt.ObjectMeta.DeletionTimestamp.IsZero() {
 		return nil
+	}
+	if needsUpdate {
+		if err = r.Update(ctx, kt); err != nil {
+			return err
+		}
 	}
 
 	return createOrUpdateTopic(ctx, &kt.Spec.KafkaTopicInClusterConfiguration, kt.FullTopicName(), kadmClient)

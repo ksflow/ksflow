@@ -18,18 +18,55 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kerr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
 	KafkaTopicFinalizerName = "kafka-topic.ksflow.io/finalizer"
 )
+
+func handleDeletionAndFinalizers(ctx context.Context,
+	meta *metav1.ObjectMeta,
+	reclaimPolicy ksfv1.KafkaTopicReclaimPolicy,
+	o client.Object,
+	topicName string,
+	kadmClient *kadm.Client) (finalizersUpdated bool, err error) {
+
+	if meta.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(o, KafkaTopicFinalizerName) {
+			return controllerutil.AddFinalizer(o, KafkaTopicFinalizerName), nil
+		}
+	} else {
+		if controllerutil.ContainsFinalizer(o, KafkaTopicFinalizerName) {
+			if reclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
+				if err = deleteTopicFromKafka(ctx, topicName, kadmClient); err != nil {
+					return false, err
+				}
+			}
+			var exists bool
+			exists, err = topicExists(ctx, topicName, kadmClient)
+			if err != nil {
+				return false, err
+			}
+			if exists {
+				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
+				return false, errors.New("waiting for topic to finish deleting")
+			}
+			return controllerutil.RemoveFinalizer(o, KafkaTopicFinalizerName), nil
+		}
+	}
+	return false, nil
+}
 
 func createOrUpdateTopic(ctx context.Context,
 	desired *ksfv1.KafkaTopicInClusterConfiguration,
