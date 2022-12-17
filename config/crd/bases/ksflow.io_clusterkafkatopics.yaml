@@ -13,7 +13,7 @@ spec:
     listKind: ClusterKafkaTopicList
     plural: clusterkafkatopics
     shortNames:
-    - kt
+    - ckt
     singular: clusterkafkatopic
   scope: Cluster
   versions:
