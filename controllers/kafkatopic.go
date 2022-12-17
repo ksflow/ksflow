@@ -31,6 +31,28 @@ const (
 	KafkaTopicFinalizerName = "kafka-topic.ksflow.io/finalizer"
 )
 
+func createOrUpdateTopic(ctx context.Context,
+	desired *ksfv1.KafkaTopicInClusterConfiguration,
+	topicName string,
+	kadmClient *kadm.Client) error {
+
+	var ticc *ksfv1.KafkaTopicInClusterConfiguration
+	ticc, err := getTopicInClusterConfiguration(ctx, topicName, kadmClient)
+	if err != nil {
+		return err
+	}
+	if ticc != nil {
+		if err = updateTopicInKafka(ctx, desired, ticc, topicName, kadmClient); err != nil {
+			return err
+		}
+	} else {
+		if err = createTopicInKafka(ctx, desired, topicName, kadmClient); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // topicExists checks if the given topic exists in the Kafka cluster
 func topicExists(ctx context.Context, topicName string, kadmClient *kadm.Client) (bool, error) {
 	allTopicDetails, err := kadmClient.ListTopics(ctx)
@@ -143,7 +165,7 @@ func updateTopicInKafka(ctx context.Context,
 }
 
 // createTopicInKafka creates the specified kafka topic using the provided Kafka client
-func createTopicInKafka(ctx context.Context, kts *ksfv1.KafkaTopicSpec, topicName string, kadmClient *kadm.Client) error {
+func createTopicInKafka(ctx context.Context, kts *ksfv1.KafkaTopicInClusterConfiguration, topicName string, kadmClient *kadm.Client) error {
 	responses, err := kadmClient.CreateTopics(ctx, negone32IfNil(kts.Partitions), negone16IfNil(kts.ReplicationFactor), kts.Configs, topicName)
 	if err != nil {
 		return err

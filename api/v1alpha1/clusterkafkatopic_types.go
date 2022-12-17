@@ -20,6 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// FullTopicName is the actual Kafka topic name used on the Kafka cluster
+func (ckt *ClusterKafkaTopic) FullTopicName() string {
+	return ckt.Name
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=kt

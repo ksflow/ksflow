@@ -18,17 +18,20 @@ package controllers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/twmb/franz-go/pkg/kadm"
+	"github.com/twmb/franz-go/pkg/kgo"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
-// ClusterKafkaTopicReconciler reconciles a ClusterKafkaTopic object
 type ClusterKafkaTopicReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme
@@ -39,8 +42,6 @@ type ClusterKafkaTopicReconciler struct {
 //+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkatopics/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ksflow.io,resources=clusterkafkatopics/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
 func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
@@ -51,21 +52,66 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	return ctrl.Result{}, r.doReconcile(ctx, &kt)
+}
+
+// same as KafkaTopicReconciler's doReconcile... use generics?
+func (r *ClusterKafkaTopicReconciler) doReconcile(ctx context.Context, kt *ksfv1.ClusterKafkaTopic) (err error) {
+	// Update status regardless of outcome
+	defer func() {
+		if statusErr := r.updateStatus(ctx, kt.Name); statusErr != nil {
+			if err != nil {
+				err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
+			} else {
+				err = fmt.Errorf("failed to update status: %v", statusErr)
+			}
+		}
+	}()
+
 	// Create Kafka client
-	kgoClient, err := r.KafkaConfig.NewClient()
+	var kgoClient *kgo.Client
+	kgoClient, err = r.KafkaConfig.NewClient()
 	if err != nil {
-		logger.Error(err, "unable to create Kafka client")
-		return ctrl.Result{}, err
+		return err
 	}
 	defer kgoClient.Close()
 	kadmClient := kadm.NewClient(kgoClient)
 
-	// TODO(user): your logic here
+	// Topic deletion & finalizers
+	if kt.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(kt, KafkaTopicFinalizerName) {
+			controllerutil.AddFinalizer(kt, KafkaTopicFinalizerName)
+			if err = r.Update(ctx, kt); err != nil {
+				return err
+			}
+		}
+	} else {
+		if controllerutil.ContainsFinalizer(kt, KafkaTopicFinalizerName) {
+			if *kt.Spec.ReclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
+				if err = deleteTopicFromKafka(ctx, kt.FullTopicName(), kadmClient); err != nil {
+					return err
+				}
+			}
+			var exists bool
+			exists, err = topicExists(ctx, kt.FullTopicName(), kadmClient)
+			if err != nil {
+				return err
+			}
+			if exists {
+				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
+				return errors.New("waiting for topic to finish deleting")
+			}
+			controllerutil.RemoveFinalizer(kt, KafkaTopicFinalizerName)
+			if err = r.Update(ctx, kt); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 
-	return ctrl.Result{}, nil
+	return createOrUpdateTopic(ctx, &kt.Spec.KafkaTopicInClusterConfiguration, kt.FullTopicName(), kadmClient)
 }
 
-// SetupWithManager sets up the controller with the Manager.
 func (r *ClusterKafkaTopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ksfv1.ClusterKafkaTopic{}).
