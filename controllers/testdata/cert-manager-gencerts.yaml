@@ -1,0 +1,123 @@
+############## Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ksflow-quickstart
+
+############## Certs
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-ca-issuer
+  namespace: ksflow-quickstart
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: selfsigned-ca
+  namespace: ksflow-quickstart
+spec:
+  isCA: true
+  commonName: TestCA-Root
+  secretName: selfsigned-ca-root-secret
+  duration: "876000h"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-ca-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: cert-issuer
+  namespace: ksflow-quickstart
+spec:
+  ca:
+    secretName: selfsigned-ca-root-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kafka-cert-password
+  namespace: ksflow-quickstart
+stringData:
+  password: "password"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kafka-cert
+  namespace: ksflow-quickstart
+spec:
+  secretName: kafka-cert
+  privateKey:
+    rotationPolicy: Always
+  commonName: localhost
+  emailAddresses:
+  - kafkatest@example.com
+  subject:
+    countries:
+      - "US"
+    provinces:
+      - "Ohio"
+    localities:
+      - "Columbus"
+    organizations:
+      - "Widgets Inc"
+    organizationalUnits:
+      - "Some Unit"
+  duration: "876000h"
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef:
+        name: kafka-cert-password
+        key: password
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: kafka-cert-password
+        key: password
+  dnsNames:
+  - localhost
+  issuerRef:
+    name: cert-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ksflow-controller-cert
+  namespace: ksflow-quickstart
+spec:
+  secretName: ksflow-controller-cert
+  privateKey:
+    rotationPolicy: Always
+  commonName: ksflow-test
+  emailAddresses:
+  - ksflowtest@example.com
+  subject:
+    countries:
+    - "US"
+    provinces:
+    - "Ohio"
+    localities:
+    - "Columbus"
+    organizations:
+    - "Widgets Inc"
+    organizationalUnits:
+    - "Some Unit"
+  duration: "876000h"
+  dnsNames:
+  - test.example.com
+  issuerRef:
+    name: cert-issuer
+    kind: Issuer
+    group: cert-manager.io

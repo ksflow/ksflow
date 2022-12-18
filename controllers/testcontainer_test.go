@@ -35,8 +35,9 @@ func (t *TestContainerWrapper) RunKafka() error {
 		Image:        fmt.Sprintf("%s:%s", "docker.vectorized.io/vectorized/redpanda", "v22.3.5"),
 		ExposedPorts: []string{"9092/tcp"},
 		Cmd:          []string{"redpanda", "start"},
-		WaitingFor:   wait.ForLog("Successfully started Redpanda!"),
-		AutoRemove:   true,
+		//WaitingFor:   wait.ForLog("INFO [KafkaRaftServer nodeId=1] Kafka Server started (kafka.server.KafkaRaftServer)"),
+		WaitingFor: wait.ForLog("Successfully started Redpanda!"),
+		AutoRemove: true,
 	}
 
 	container, err := testcontainers.GenericContainer(context.Background(), testcontainers.GenericContainerRequest{

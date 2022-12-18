@@ -42,7 +42,3 @@ kubectl delete -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/sa
 # uninstall cert-manager
 kubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.10.1/cert-manager.yaml
 ```
-
-#### What's Next?
-Try out some [examples](../examples).
-See [install.md](./install.md) for a more complete installation that relies on your existing infrastructure.
