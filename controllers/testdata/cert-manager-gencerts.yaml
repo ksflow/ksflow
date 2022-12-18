@@ -63,15 +63,15 @@ spec:
   - kafkatest@example.com
   subject:
     countries:
-      - "US"
+    - "US"
     provinces:
-      - "Ohio"
+    - "Ohio"
     localities:
-      - "Columbus"
+    - "Columbus"
     organizations:
-      - "Widgets Inc"
+    - "Widgets Inc"
     organizationalUnits:
-      - "Some Unit"
+    - "Some Unit"
   duration: "876000h"
   keystores:
     jks:
