@@ -24,16 +24,16 @@ import (
 )
 
 // NewClient retrieves a Kafka client from the KafkaConfig
-func (kc *KafkaConfig) NewClient() (*kgo.Client, error) {
+func (kcc *KafkaConnectionConfig) NewClient() (*kgo.Client, error) {
 	tc, err := tlscfg.New(
-		tlscfg.WithDiskCA(kc.KafkaTLSConfig.CAFilePath, tlscfg.ForClient),
-		tlscfg.WithDiskKeyPair(kc.KafkaTLSConfig.CertFilePath, kc.KafkaTLSConfig.KeyFilePath),
+		tlscfg.WithDiskCA(kcc.KafkaTLSConfig.CAFilePath, tlscfg.ForClient),
+		tlscfg.WithDiskKeyPair(kcc.KafkaTLSConfig.CertFilePath, kcc.KafkaTLSConfig.KeyFilePath),
 	)
 	if err != nil {
 		return nil, err
 	}
 	return kgo.NewClient(
-		kgo.SeedBrokers(kc.BootstrapServers...),
+		kgo.SeedBrokers(kcc.BootstrapServers...),
 		kgo.DialTLSConfig(tc),
 	)
 }
@@ -50,7 +50,7 @@ type KafkaTLSConfig struct {
 	CAFilePath string `json:"ca"`
 }
 
-type KafkaConfig struct {
+type KafkaConnectionConfig struct {
 	// BootstrapServers provides the list of initial Kafka brokers to connect to
 	BootstrapServers []string `json:"bootstrapServers"`
 
@@ -66,7 +66,11 @@ type KsflowConfig struct {
 
 	crv1.ControllerManagerConfigurationSpec `json:",inline"`
 
-	KafkaConfig KafkaConfig `json:"kafka"`
+	// KafkaConnectionConfig provides values for connecting to the Kafka cluster
+	KafkaConnectionConfig KafkaConnectionConfig `json:"kafkaConnection"`
+
+	// KafkaTopicDefaults provides default values for any KafkaTopic or ClusterKafkaTopic
+	KafkaTopicDefaultsConfig KafkaTopicSpec `json:"kafkaTopicDefaults,omitempty"`
 }
 
 func init() {

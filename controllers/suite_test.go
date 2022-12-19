@@ -26,6 +26,7 @@ import (
 	"github.com/ksflow/ksflow/controllers/kafkatopic"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -102,7 +103,7 @@ var _ = BeforeSuite(func() {
 	k8sManager, err := ctrl.NewManager(testCfg, ctrl.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
-	kafkaConfig := ksfv1.KafkaConfig{
+	kafkaConnectionConfig := ksfv1.KafkaConnectionConfig{
 		BootstrapServers: testKafkaContainerWrapper.GetAddresses(),
 		KafkaTLSConfig: ksfv1.KafkaTLSConfig{
 			CertFilePath: path.Join(currTestDir(), "testdata", "certs", "test-ksflow-controller.crt"),
@@ -111,17 +112,30 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
+	rfi16 := int16(3)
+	rpolicy := ksfv1.KafkaTopicReclaimPolicyDelete
+	kafkaTopicDefaultsConfig := ksfv1.KafkaTopicSpec{
+		KafkaTopicInClusterConfiguration: ksfv1.KafkaTopicInClusterConfiguration{
+			Partitions:        pointer.Int32(2),
+			ReplicationFactor: &rfi16,
+			Configs:           nil,
+		},
+		ReclaimPolicy: &rpolicy,
+	}
+
 	err = (&kafkatopic.KafkaTopicReconciler{
-		Client:      k8sManager.GetClient(),
-		Scheme:      k8sManager.GetScheme(),
-		KafkaConfig: kafkaConfig,
+		Client:                 k8sManager.GetClient(),
+		Scheme:                 k8sManager.GetScheme(),
+		KafkaConnectionConfig:  kafkaConnectionConfig,
+		KafkaTopicSpecDefaults: kafkaTopicDefaultsConfig,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&kafkatopic.ClusterKafkaTopicReconciler{
-		Client:      k8sManager.GetClient(),
-		Scheme:      k8sManager.GetScheme(),
-		KafkaConfig: kafkaConfig,
+		Client:                 k8sManager.GetClient(),
+		Scheme:                 k8sManager.GetScheme(),
+		KafkaConnectionConfig:  kafkaConnectionConfig,
+		KafkaTopicSpecDefaults: kafkaTopicDefaultsConfig,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

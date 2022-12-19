@@ -40,18 +40,27 @@ func doReconcile(ctx context.Context,
 	meta *metav1.ObjectMeta,
 	status *ksfv1.KafkaTopicStatus,
 	spec *ksfv1.KafkaTopicSpec,
-	reclaimPolicy ksfv1.KafkaTopicReclaimPolicy,
 	o client.Object,
 	topicName string,
 	kadmClient *kadm.Client) error {
 
 	status.Phase = ksfv1.KafkaTopicPhaseUnknown
+	if spec.ReclaimPolicy == nil {
+		return errors.New("reclaim policy is required and no defaults found in controller config")
+	}
+	status.ReclaimPolicy = spec.ReclaimPolicy
+	if spec.Partitions == nil {
+		return errors.New("topic partitions is required and no defaults found in controller config")
+	}
+	if spec.ReplicationFactor == nil {
+		return errors.New("topic replication factor is required and no defaults found in controller config")
+	}
 
 	// Topic deletion & finalizers
 	if !meta.DeletionTimestamp.IsZero() {
 		status.Phase = ksfv1.KafkaTopicPhaseDeleting
 	}
-	ret, err := handleDeletionAndFinalizers(ctx, meta, reclaimPolicy, o, topicName, kadmClient)
+	ret, err := handleDeletionAndFinalizers(ctx, meta, *status.ReclaimPolicy, o, topicName, kadmClient)
 	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseError
 		return err
@@ -207,10 +216,8 @@ func updateTopicInKafka(ctx context.Context,
 	logger := log.FromContext(ctx)
 
 	// Set Partitions
-	desiredPartitions := negone32IfNil(desired.Partitions)
-	observedPartitions := negone32IfNil(observed.Partitions)
-	if desiredPartitions != observedPartitions {
-		updatePartitionsResponses, err := kadmClient.UpdatePartitions(ctx, int(desiredPartitions), topicName)
+	if *desired.Partitions != *observed.Partitions {
+		updatePartitionsResponses, err := kadmClient.UpdatePartitions(ctx, int(*desired.Partitions), topicName)
 		if err != nil {
 			return err
 		}
@@ -247,10 +254,8 @@ func updateTopicInKafka(ctx context.Context,
 	}
 
 	// Set ReplicationFactor
-	desiredReplicationFactor := negone16IfNil(desired.ReplicationFactor)
-	observedReplicationFactor := negone16IfNil(observed.ReplicationFactor)
-	if desiredReplicationFactor != observedReplicationFactor {
-		logger.Error(fmt.Errorf("cannot change replicationFactor from %d to %d", observedReplicationFactor, desiredReplicationFactor), "updating replication factor is not yet supported")
+	if *desired.ReplicationFactor != *observed.ReplicationFactor {
+		logger.Error(fmt.Errorf("cannot change replicationFactor from %d to %d", *observed.ReplicationFactor, *desired.ReplicationFactor), "updating replication factor is not yet supported")
 	}
 
 	return nil
@@ -258,7 +263,7 @@ func updateTopicInKafka(ctx context.Context,
 
 // createTopicInKafka creates the specified kafka topic using the provided Kafka client
 func createTopicInKafka(ctx context.Context, kts *ksfv1.KafkaTopicInClusterConfiguration, topicName string, kadmClient *kadm.Client) error {
-	responses, err := kadmClient.CreateTopics(ctx, negone32IfNil(kts.Partitions), negone16IfNil(kts.ReplicationFactor), kts.Configs, topicName)
+	responses, err := kadmClient.CreateTopics(ctx, *kts.Partitions, *kts.ReplicationFactor, kts.Configs, topicName)
 	if err != nil {
 		return err
 	}
@@ -286,20 +291,4 @@ func deleteTopicFromKafka(ctx context.Context, topicName string, kadmClient *kad
 		return response.Err
 	}
 	return nil
-}
-
-func negone32IfNil(p *int32) int32 {
-	np := int32(-1)
-	if p != nil {
-		np = *p
-	}
-	return np
-}
-
-func negone16IfNil(p *int16) int16 {
-	np := int16(-1)
-	if p != nil {
-		np = *p
-	}
-	return np
 }

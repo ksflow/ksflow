@@ -17,12 +17,46 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
 // FullTopicName is the actual Kafka topic name used on the Kafka cluster
 func (kt *KafkaTopic) FullTopicName() string {
 	return kt.Namespace + "." + kt.Name
+}
+
+// WithDefaultsFrom creates a KafkaTopicSpec using the provided KafkaTopicSpecs
+func (kts *KafkaTopicSpec) WithDefaultsFrom(defaultKTS *KafkaTopicSpec) (*KafkaTopicSpec, error) {
+	if kts == nil && defaultKTS == nil {
+		return nil, nil
+	} else if kts == nil {
+		return defaultKTS, nil
+	} else if defaultKTS == nil {
+		return kts, nil
+	}
+
+	originalKTSBytes, err := json.Marshal(kts)
+	if err != nil {
+		return nil, err
+	}
+	defaultKTSBytes, err := json.Marshal(defaultKTS)
+	if err != nil {
+		return nil, err
+	}
+
+	mergedKTSBytes, err := strategicpatch.StrategicMergePatch(defaultKTSBytes, originalKTSBytes, KafkaTopicSpec{})
+	if err != nil {
+		return nil, err
+	}
+	mergedKTS := KafkaTopicSpec{}
+	err = json.Unmarshal(mergedKTSBytes, &mergedKTS)
+	if err != nil {
+		return nil, err
+	}
+	return &mergedKTS, nil
 }
 
 // KafkaTopicInClusterConfiguration is the part of the KafkaTopicSpec that maps directly to a real Kafka topic
@@ -51,8 +85,6 @@ type KafkaTopicSpec struct {
 	// +optional
 	KafkaTopicInClusterConfiguration `json:",inline"`
 
-	// +kubebuilder:default:=Delete
-
 	// ReclaimPolicy defines what should happen to the underlying kafka topic if the KafkaTopic is deleted.
 	// +optional
 	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
@@ -62,6 +94,8 @@ type KafkaTopicSpec struct {
 type KafkaTopicStatus struct {
 	KafkaTopicInClusterConfiguration `json:",inline"`
 
+	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
+
 	Phase       KafkaTopicPhase `json:"phase,omitempty"`
 	Reason      string          `json:"reason,omitempty"`
 	LastUpdated metav1.Time     `json:"lastUpdated,omitempty"`
@@ -70,9 +104,9 @@ type KafkaTopicStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kt
-// +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.spec.partitions`
-// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicationFactor`
-// +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.spec.reclaimPolicy`
+// +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.status.partitions`
+// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicationFactor`
+// +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.status.reclaimPolicy`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`

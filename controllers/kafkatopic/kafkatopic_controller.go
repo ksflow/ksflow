@@ -33,8 +33,9 @@ import (
 
 type KafkaTopicReconciler struct {
 	client.Client
-	Scheme      *runtime.Scheme
-	KafkaConfig ksfv1.KafkaConfig
+	Scheme                 *runtime.Scheme
+	KafkaConnectionConfig  ksfv1.KafkaConnectionConfig
+	KafkaTopicSpecDefaults ksfv1.KafkaTopicSpec
 }
 
 //+kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics,verbs=get;list;watch;create;update;patch;delete
@@ -51,7 +52,7 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Create Kafka client
-	kgoClient, err := r.KafkaConfig.NewClient()
+	kgoClient, err := r.KafkaConnectionConfig.NewClient()
 	if err != nil {
 		logger.Error(err, "unable to create Kafka client")
 		return ctrl.Result{}, err
@@ -61,7 +62,12 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Reconcile, update spec w/finalizers, update status, return
 	ktCopy := kt.DeepCopy()
-	err = doReconcile(ctx, &ktCopy.ObjectMeta, &ktCopy.Status, &kt.Spec, *kt.Spec.ReclaimPolicy, &kt, kt.FullTopicName(), kadmClient)
+	ktCopySpec, err := ktCopy.Spec.WithDefaultsFrom(&r.KafkaTopicSpecDefaults)
+	if err != nil {
+		logger.Error(err, "unable to set defaults on Kafka Topic")
+		return ctrl.Result{}, err
+	}
+	err = doReconcile(ctx, &ktCopy.ObjectMeta, &ktCopy.Status, ktCopySpec, ktCopy, ktCopy.FullTopicName(), kadmClient)
 	if !equality.Semantic.DeepEqual(kt.Finalizers, ktCopy.Finalizers) {
 		if specErr := r.Client.Update(ctx, ktCopy); specErr != nil {
 			if err != nil {

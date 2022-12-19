@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -58,24 +59,37 @@ var _ = Describe("KafkaConfig controller", func() {
 			Expect(testK8sClient.Create(ctx, kc)).Should(Succeed())
 
 			KTNamespacedName := types.NamespacedName{Name: KTName, Namespace: KTNamespace}
-			createdKT := &ksfv1.KafkaTopic{}
 			Eventually(func() bool {
+				createdKT := &ksfv1.KafkaTopic{}
 				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
 				if err != nil {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
-			Expect(*createdKT.Spec.ReclaimPolicy).Should(Equal(ksfv1.KafkaTopicReclaimPolicyDelete))
+
+			By("By checking that the KafkaTopic has a Delete Reclaim policy")
+			Eventually(func() (string, error) {
+				createdKT := &ksfv1.KafkaTopic{}
+				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
+				if err != nil {
+					return "", err
+				}
+				if createdKT.Status.ReclaimPolicy == nil {
+					return "", errors.New("reclaim policy is nil")
+				}
+				return string(*createdKT.Status.ReclaimPolicy), nil
+			}, duration, interval).Should(Equal("Delete"))
 
 			By("By checking that the KafkaTopic has an Available phase")
 			Eventually(func() (string, error) {
+				createdKT := &ksfv1.KafkaTopic{}
 				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
 				if err != nil {
 					return "", err
 				}
 				return string(createdKT.Status.Phase), nil
-			}, duration, interval).Should(Equal(ksfv1.KafkaTopicPhaseAvailable))
+			}, duration, interval).Should(Equal("Available"))
 
 			By("By updating a topic config")
 
@@ -86,13 +100,13 @@ var _ = Describe("KafkaConfig controller", func() {
 
 			By("By checking that the config is updated")
 			Eventually(func() (*string, error) {
+				createdKT := &ksfv1.KafkaTopic{}
 				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
 				if err != nil {
 					return nil, err
 				}
 				return createdKT.Status.Configs["retention.bytes"], nil
 			}, duration, interval).ShouldNot(BeNil())
-			// TODO: check kafka cluster for topic
 		})
 	})
 })

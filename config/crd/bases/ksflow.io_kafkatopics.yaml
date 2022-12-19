@@ -18,13 +18,13 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.partitions
+    - jsonPath: .status.partitions
       name: Partitions
       type: string
-    - jsonPath: .spec.replicationFactor
+    - jsonPath: .status.replicationFactor
       name: Replicas
       type: string
-    - jsonPath: .spec.reclaimPolicy
+    - jsonPath: .status.reclaimPolicy
       name: ReclaimPolicy
       type: string
     - jsonPath: .status.phase
@@ -68,7 +68,6 @@ spec:
                 minimum: 1
                 type: integer
               reclaimPolicy:
-                default: Delete
                 description: ReclaimPolicy defines what should happen to the underlying
                   kafka topic if the KafkaTopic is deleted.
                 enum:
@@ -108,6 +107,11 @@ spec:
                 - Error
                 type: string
               reason:
+                type: string
+              reclaimPolicy:
+                enum:
+                - Delete
+                - Retain
                 type: string
               replicationFactor:
                 description: ReplicationFactor is the number of replicas for each
