@@ -28,7 +28,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -36,7 +35,7 @@ const (
 )
 
 // doReconcile handles reconciliation of KafkaTopic and ClusterKafkaTopics
-func doReconcile(ctx context.Context,
+func doReconcile(
 	meta *metav1.ObjectMeta,
 	status *ksfv1.KafkaTopicStatus,
 	spec *ksfv1.KafkaTopicSpec,
@@ -60,7 +59,7 @@ func doReconcile(ctx context.Context,
 	if !meta.DeletionTimestamp.IsZero() {
 		status.Phase = ksfv1.KafkaTopicPhaseDeleting
 	}
-	ret, err := handleDeletionAndFinalizers(ctx, meta, *status.ReclaimPolicy, o, topicName, kadmClient)
+	ret, err := handleDeletionAndFinalizers(meta, *status.ReclaimPolicy, o, topicName, kadmClient)
 	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseError
 		return err
@@ -70,7 +69,7 @@ func doReconcile(ctx context.Context,
 	}
 
 	// Topic create or update
-	if err = createOrUpdateTopic(ctx, &spec.KafkaTopicInClusterConfiguration, topicName, kadmClient); err != nil {
+	if err = createOrUpdateTopic(&spec.KafkaTopicInClusterConfiguration, topicName, kadmClient); err != nil {
 		return err
 	}
 	if err != nil {
@@ -80,7 +79,7 @@ func doReconcile(ctx context.Context,
 
 	// Update status
 	var ticc *ksfv1.KafkaTopicInClusterConfiguration
-	ticc, err = getTopicInClusterConfiguration(ctx, topicName, kadmClient)
+	ticc, err = getTopicInClusterConfiguration(topicName, kadmClient)
 	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseError
 		return err
@@ -96,7 +95,7 @@ func doReconcile(ctx context.Context,
 
 // handleDeletionAndFinalizers updates finalizers if necessary and handles deletion of kafka topics
 // returns false if processing should continue, true if we should finish reconcile
-func handleDeletionAndFinalizers(ctx context.Context,
+func handleDeletionAndFinalizers(
 	meta *metav1.ObjectMeta,
 	reclaimPolicy ksfv1.KafkaTopicReclaimPolicy,
 	o client.Object,
@@ -112,11 +111,11 @@ func handleDeletionAndFinalizers(ctx context.Context,
 		if controllerutil.ContainsFinalizer(o, FinalizerName) {
 			// our finalizer is present, so lets handle any external dependency
 			if reclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
-				if err := deleteTopicFromKafka(ctx, topicName, kadmClient); err != nil {
+				if err := deleteTopicFromKafka(topicName, kadmClient); err != nil {
 					return true, err
 				}
 			}
-			exists, err := topicExists(ctx, topicName, kadmClient)
+			exists, err := topicExists(topicName, kadmClient)
 			if err != nil {
 				return true, err
 			}
@@ -132,22 +131,22 @@ func handleDeletionAndFinalizers(ctx context.Context,
 	return false, nil
 }
 
-func createOrUpdateTopic(ctx context.Context,
+func createOrUpdateTopic(
 	desired *ksfv1.KafkaTopicInClusterConfiguration,
 	topicName string,
 	kadmClient *kadm.Client) error {
 
 	var ticc *ksfv1.KafkaTopicInClusterConfiguration
-	ticc, err := getTopicInClusterConfiguration(ctx, topicName, kadmClient)
+	ticc, err := getTopicInClusterConfiguration(topicName, kadmClient)
 	if err != nil {
 		return err
 	}
 	if ticc != nil {
-		if err = updateTopicInKafka(ctx, desired, ticc, topicName, kadmClient); err != nil {
+		if err = updateTopicInKafka(desired, ticc, topicName, kadmClient); err != nil {
 			return err
 		}
 	} else {
-		if err = createTopicInKafka(ctx, desired, topicName, kadmClient); err != nil {
+		if err = createTopicInKafka(desired, topicName, kadmClient); err != nil {
 			return err
 		}
 	}
@@ -155,8 +154,8 @@ func createOrUpdateTopic(ctx context.Context,
 }
 
 // topicExists checks if the given topic exists in the Kafka cluster
-func topicExists(ctx context.Context, topicName string, kadmClient *kadm.Client) (bool, error) {
-	allTopicDetails, err := kadmClient.ListTopics(ctx)
+func topicExists(topicName string, kadmClient *kadm.Client) (bool, error) {
+	allTopicDetails, err := kadmClient.ListTopics(context.Background())
 	if err != nil {
 		return false, err
 	}
@@ -171,9 +170,9 @@ func topicExists(ctx context.Context, topicName string, kadmClient *kadm.Client)
 }
 
 // getTopicInClusterConfiguration retrieves the current observed state for the given topicName by making any necessary calls to Kafka
-func getTopicInClusterConfiguration(ctx context.Context, topicName string, kadmClient *kadm.Client) (*ksfv1.KafkaTopicInClusterConfiguration, error) {
+func getTopicInClusterConfiguration(topicName string, kadmClient *kadm.Client) (*ksfv1.KafkaTopicInClusterConfiguration, error) {
 	ktc := ksfv1.KafkaTopicInClusterConfiguration{}
-	allTopicDetails, err := kadmClient.ListTopics(ctx)
+	allTopicDetails, err := kadmClient.ListTopics(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +188,7 @@ func getTopicInClusterConfiguration(ctx context.Context, topicName string, kadmC
 	ktc.ReplicationFactor = &rf
 	ktc.Partitions = pointer.Int32(int32(len(td.Partitions)))
 
-	rcs, err := kadmClient.DescribeTopicConfigs(ctx, topicName)
+	rcs, err := kadmClient.DescribeTopicConfigs(context.Background(), topicName)
 	if err != nil {
 		return nil, err
 	}
@@ -208,16 +207,20 @@ func getTopicInClusterConfiguration(ctx context.Context, topicName string, kadmC
 
 // updateTopicInKafka compares the desired state (coming from spec) and the observed state (coming from the status),
 // making any necessary calls to Kafka to bring them closer together.
-func updateTopicInKafka(ctx context.Context,
+func updateTopicInKafka(
 	desired *ksfv1.KafkaTopicInClusterConfiguration,
 	observed *ksfv1.KafkaTopicInClusterConfiguration,
 	topicName string,
 	kadmClient *kadm.Client) error {
-	logger := log.FromContext(ctx)
+
+	// Set ReplicationFactor
+	if *desired.ReplicationFactor != *observed.ReplicationFactor {
+		return fmt.Errorf("cannot change replicationFactor from %d to %d, updating replication factor is not yet supported", *observed.ReplicationFactor, *desired.ReplicationFactor)
+	}
 
 	// Set Partitions
 	if *desired.Partitions != *observed.Partitions {
-		updatePartitionsResponses, err := kadmClient.UpdatePartitions(ctx, int(*desired.Partitions), topicName)
+		updatePartitionsResponses, err := kadmClient.UpdatePartitions(context.Background(), int(*desired.Partitions), topicName)
 		if err != nil {
 			return err
 		}
@@ -240,7 +243,7 @@ func updateTopicInKafka(ctx context.Context,
 		}
 	}
 	if len(alterConfigs) != 0 {
-		alterConfigsResponses, err := kadmClient.AlterTopicConfigs(ctx, alterConfigs, topicName)
+		alterConfigsResponses, err := kadmClient.AlterTopicConfigs(context.Background(), alterConfigs, topicName)
 		if err != nil {
 			return err
 		}
@@ -253,17 +256,12 @@ func updateTopicInKafka(ctx context.Context,
 		}
 	}
 
-	// Set ReplicationFactor
-	if *desired.ReplicationFactor != *observed.ReplicationFactor {
-		logger.Error(fmt.Errorf("cannot change replicationFactor from %d to %d", *observed.ReplicationFactor, *desired.ReplicationFactor), "updating replication factor is not yet supported")
-	}
-
 	return nil
 }
 
 // createTopicInKafka creates the specified kafka topic using the provided Kafka client
-func createTopicInKafka(ctx context.Context, kts *ksfv1.KafkaTopicInClusterConfiguration, topicName string, kadmClient *kadm.Client) error {
-	responses, err := kadmClient.CreateTopics(ctx, *kts.Partitions, *kts.ReplicationFactor, kts.Configs, topicName)
+func createTopicInKafka(kts *ksfv1.KafkaTopicInClusterConfiguration, topicName string, kadmClient *kadm.Client) error {
+	responses, err := kadmClient.CreateTopics(context.Background(), *kts.Partitions, *kts.ReplicationFactor, kts.Configs, topicName)
 	if err != nil {
 		return err
 	}
@@ -278,8 +276,8 @@ func createTopicInKafka(ctx context.Context, kts *ksfv1.KafkaTopicInClusterConfi
 }
 
 // deleteTopicFromKafka deletes the specified kafka topic using the provided Kafka client
-func deleteTopicFromKafka(ctx context.Context, topicName string, kadmClient *kadm.Client) error {
-	responses, err := kadmClient.DeleteTopics(ctx, topicName)
+func deleteTopicFromKafka(topicName string, kadmClient *kadm.Client) error {
+	responses, err := kadmClient.DeleteTopics(context.Background(), topicName)
 	if err != nil {
 		return err
 	}

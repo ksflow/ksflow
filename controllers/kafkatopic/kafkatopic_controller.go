@@ -67,7 +67,7 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Error(err, "unable to set defaults on Kafka Topic")
 		return ctrl.Result{}, err
 	}
-	err = doReconcile(ctx, &ktCopy.ObjectMeta, &ktCopy.Status, ktCopySpec, ktCopy, ktCopy.FullTopicName(), kadmClient)
+	err = doReconcile(&ktCopy.ObjectMeta, &ktCopy.Status, ktCopySpec, ktCopy, ktCopy.FullTopicName(), kadmClient)
 	if !equality.Semantic.DeepEqual(kt.Finalizers, ktCopy.Finalizers) {
 		if specErr := r.Client.Update(ctx, ktCopy); specErr != nil {
 			if err != nil {

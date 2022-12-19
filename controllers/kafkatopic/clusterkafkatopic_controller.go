@@ -68,7 +68,7 @@ func (r *ClusterKafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		logger.Error(err, "unable to set defaults on Cluster Kafka Topic")
 		return ctrl.Result{}, err
 	}
-	err = doReconcile(ctx, &ktcCopy.ObjectMeta, &ktcCopy.Status, ktcCopySpec, ktcCopy, ktcCopy.FullTopicName(), kadmClient)
+	err = doReconcile(&ktcCopy.ObjectMeta, &ktcCopy.Status, ktcCopySpec, ktcCopy, ktcCopy.FullTopicName(), kadmClient)
 	if !equality.Semantic.DeepEqual(ktc.Finalizers, ktcCopy.Finalizers) {
 		if specErr := r.Client.Update(ctx, ktcCopy); specErr != nil {
 			if err != nil {
