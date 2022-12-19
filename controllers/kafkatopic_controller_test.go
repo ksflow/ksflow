@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
@@ -69,12 +68,6 @@ var _ = Describe("KafkaConfig controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKT.Spec.ReclaimPolicy).Should(Equal(ksfv1.KafkaTopicReclaimPolicyDelete))
 
-			By("By starting the Kafka broker")
-
-			// add label to trigger reconcile
-			patchStr := fmt.Sprintf(`{"spec": {"configs": {"bootstrap.servers": "%s"}}}`, strings.Join(testKafkaContainerWrapper.GetAddresses(), ","))
-			Expect(testK8sClient.Patch(ctx, kc, crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
-
 			By("By checking that the KafkaTopic has an Available phase")
 			Eventually(func() (string, error) {
 				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
@@ -83,6 +76,22 @@ var _ = Describe("KafkaConfig controller", func() {
 				}
 				return string(createdKT.Status.Phase), nil
 			}, duration, interval).Should(Equal(ksfv1.KafkaTopicPhaseAvailable))
+
+			By("By updating a topic config")
+
+			// add label to trigger reconcile
+			retentionBytes := "1073741824"
+			patchStr := fmt.Sprintf(`{"spec": {"configs": {"retention.bytes": "%s"}}}`, retentionBytes)
+			Expect(testK8sClient.Patch(ctx, kc, crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
+
+			By("By checking that the config is updated")
+			Eventually(func() (*string, error) {
+				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
+				if err != nil {
+					return nil, err
+				}
+				return createdKT.Status.Configs["retention.bytes"], nil
+			}, duration, interval).ShouldNot(BeNil())
 			// TODO: check kafka cluster for topic
 		})
 	})

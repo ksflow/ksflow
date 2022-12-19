@@ -5,6 +5,13 @@ mkdir -p /opt/bitnami/kafka/config/certs/
 cp /*.jks /opt/bitnami/kafka/config/certs/
 cp /*.p12 /opt/bitnami/kafka/config/certs/
 
+# wait to find out the real port
+until [ -f /testcontainers_start.sh ]
+do
+  sleep 0.1
+done
+. /testcontainers_start.sh
+
 # run original cmd
 set -o errexit
 set -o nounset
