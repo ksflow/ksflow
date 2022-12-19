@@ -56,6 +56,11 @@ func TestAPIs(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
+func currTestDir() string {
+	_, currTestFilename, _, _ := runtime.Caller(0)
+	return path.Dir(currTestFilename)
+}
+
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
@@ -97,14 +102,12 @@ var _ = BeforeSuite(func() {
 	k8sManager, err := ctrl.NewManager(testCfg, ctrl.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
-	_, currTestFilename, _, _ := runtime.Caller(0)
-
 	kafkaConfig := ksfv1.KafkaConfig{
 		BootstrapServers: testKafkaContainerWrapper.GetAddresses(),
 		KafkaTLSConfig: ksfv1.KafkaTLSConfig{
-			CertFilePath: path.Join(path.Dir(currTestFilename), "testdata", "certs", "test-ksflow-controller.crt"),
-			KeyFilePath:  path.Join(path.Dir(currTestFilename), "testdata", "certs", "test-ksflow-controller.key"),
-			CAFilePath:   path.Join(path.Dir(currTestFilename), "testdata", "certs", "test-root-ca.crt"),
+			CertFilePath: path.Join(currTestDir(), "testdata", "certs", "test-ksflow-controller.crt"),
+			KeyFilePath:  path.Join(currTestDir(), "testdata", "certs", "test-ksflow-controller.key"),
+			CAFilePath:   path.Join(currTestDir(), "testdata", "certs", "test-root-ca.crt"),
 		},
 	}
 
