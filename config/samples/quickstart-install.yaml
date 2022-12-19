@@ -187,8 +187,6 @@ spec:
           value: "SSL://kafka.ksflow-quickstart.svc.cluster.local:9092"
         - name: KAFKA_CFG_EARLY_START_LISTENERS
           value: CONTROLLER
-        # TODO: configure ksflow controller as a non-superuser ACL administrator instead
-        # ref: https://docs.confluent.io/platform/current/kafka/authorization.html#creating-non-super-user-acl-administrators
         - name: KAFKA_CFG_SUPER_USERS
           value: "User:CN=kafka.ksflow-quickstart.svc.cluster.local,OU=Some Unit,O=Widgets Inc,L=Columbus,ST=Ohio,C=US;User:CN=ksflow-controller.ksflow-quickstart.svc.cluster.local,OU=Some Unit,O=Widgets Inc,L=Columbus,ST=Ohio,C=US"
         - name: KAFKA_CFG_LISTENERS

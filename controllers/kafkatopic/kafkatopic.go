@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -161,6 +162,22 @@ func topicExists(ctx context.Context, topicName string, kadmClient *kadm.Client)
 	return true, nil
 }
 
+// getBrokerConfigs retrieves the Kafka broker configs from the Kafka cluster, ref: https://kafka.apache.org/documentation/#brokerconfigs
+func getBrokerConfigs(ctx context.Context, kadmClient *kadm.Client) ([]kadm.Config, error) {
+	allBrokerResourceConfigs, err := kadmClient.DescribeBrokerConfigs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(allBrokerResourceConfigs) != 1 {
+		return nil, fmt.Errorf("expected to retrieve exactly 1 cluster-level broker config, but received %d", len(allBrokerResourceConfigs))
+	}
+	brokerResourceConfig := allBrokerResourceConfigs[0]
+	if brokerResourceConfig.Err != nil {
+		return nil, fmt.Errorf("received error from broker configs, err %w", brokerResourceConfig.Err)
+	}
+	return brokerResourceConfig.Configs, nil
+}
+
 // getTopicInClusterConfiguration retrieves the current observed state for the given topicName by making any necessary calls to Kafka
 func getTopicInClusterConfiguration(ctx context.Context, topicName string, kadmClient *kadm.Client) (*ksfv1.KafkaTopicInClusterConfiguration, error) {
 	ktc := ksfv1.KafkaTopicInClusterConfiguration{}
@@ -197,6 +214,41 @@ func getTopicInClusterConfiguration(ctx context.Context, topicName string, kadmC
 	return &ktc, nil
 }
 
+// getDefaultTopicPartitionsAndReplicas returns the default partitions and replication-factor from the Kafka cluster
+func getDefaultTopicPartitionsAndReplicas(ctx context.Context, kadmClient *kadm.Client) (*int32, *int16, error) {
+	logger := log.FromContext(ctx)
+	var defaultTopicPartitions *int32
+	var defaultTopicReplicationFactor *int16
+	bcs, err := getBrokerConfigs(ctx, kadmClient)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error retrieving broker configs, err: %w", err)
+	}
+	logger.Info("config len:", "len", len(bcs))
+	for _, c := range bcs {
+		if c.Key == "default.replication.factor" && c.Value != nil {
+			i, err := strconv.Atoi(*c.Value)
+			if err != nil {
+				return nil, nil, fmt.Errorf("unable to retrieve default replication factor from cluster, err: %w", err)
+			}
+			i16 := int16(i)
+			defaultTopicReplicationFactor = &i16
+		} else if c.Key == "num.partitions" && c.Value != nil {
+			i, err := strconv.Atoi(*c.Value)
+			if err != nil {
+				return nil, nil, fmt.Errorf("unable to retrieve default partitions from cluster, err: %w", err)
+			}
+			defaultTopicPartitions = pointer.Int32(int32(i))
+		}
+	}
+	if defaultTopicReplicationFactor == nil {
+		return nil, nil, fmt.Errorf("default.replication.factor config missing from broker configs")
+	}
+	if defaultTopicPartitions == nil {
+		return nil, nil, fmt.Errorf("num.partitions config missing from broker configs")
+	}
+	return defaultTopicPartitions, defaultTopicReplicationFactor, nil
+}
+
 // updateTopicInKafka compares the desired state (coming from spec) and the observed state (coming from the status),
 // making any necessary calls to Kafka to bring them closer together.
 func updateTopicInKafka(ctx context.Context,
@@ -206,9 +258,21 @@ func updateTopicInKafka(ctx context.Context,
 	kadmClient *kadm.Client) error {
 	logger := log.FromContext(ctx)
 
+	// Retrieve default topic partitions and replicationFactor
+	defaultPartitions, defaultReplicationFactor, err := getDefaultTopicPartitionsAndReplicas(ctx, kadmClient)
+	if err != nil {
+		return err
+	}
+
 	// Set Partitions
-	desiredPartitions := negone32IfNil(desired.Partitions)
-	observedPartitions := negone32IfNil(observed.Partitions)
+	desiredPartitions := *defaultPartitions
+	observedPartitions := *defaultPartitions
+	if desired.Partitions != nil {
+		desiredPartitions = *desired.Partitions
+	}
+	if observed.Partitions != nil {
+		observedPartitions = *observed.Partitions
+	}
 	if desiredPartitions != observedPartitions {
 		updatePartitionsResponses, err := kadmClient.UpdatePartitions(ctx, int(desiredPartitions), topicName)
 		if err != nil {
@@ -247,8 +311,14 @@ func updateTopicInKafka(ctx context.Context,
 	}
 
 	// Set ReplicationFactor
-	desiredReplicationFactor := negone16IfNil(desired.ReplicationFactor)
-	observedReplicationFactor := negone16IfNil(observed.ReplicationFactor)
+	desiredReplicationFactor := *defaultReplicationFactor
+	observedReplicationFactor := *defaultReplicationFactor
+	if desired.ReplicationFactor != nil {
+		desiredReplicationFactor = *desired.ReplicationFactor
+	}
+	if observed.ReplicationFactor != nil {
+		observedReplicationFactor = *observed.ReplicationFactor
+	}
 	if desiredReplicationFactor != observedReplicationFactor {
 		logger.Error(fmt.Errorf("cannot change replicationFactor from %d to %d", observedReplicationFactor, desiredReplicationFactor), "updating replication factor is not yet supported")
 	}
