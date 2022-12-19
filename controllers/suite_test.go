@@ -18,7 +18,9 @@ package controllers
 
 import (
 	"context"
+	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/ksflow/ksflow/controllers/kafkatopic"
@@ -95,15 +97,28 @@ var _ = BeforeSuite(func() {
 	k8sManager, err := ctrl.NewManager(testCfg, ctrl.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
+	_, currTestFilename, _, _ := runtime.Caller(0)
+
+	kafkaConfig := ksfv1.KafkaConfig{
+		BootstrapServers: testKafkaContainerWrapper.GetAddresses(),
+		KafkaTLSConfig: ksfv1.KafkaTLSConfig{
+			CertFilePath: path.Join(path.Dir(currTestFilename), "testdata", "certs", "test-ksflow-controller.crt"),
+			KeyFilePath:  path.Join(path.Dir(currTestFilename), "testdata", "certs", "test-ksflow-controller.key"),
+			CAFilePath:   path.Join(path.Dir(currTestFilename), "testdata", "certs", "test-root-ca.crt"),
+		},
+	}
+
 	err = (&kafkatopic.KafkaTopicReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
+		Client:      k8sManager.GetClient(),
+		Scheme:      k8sManager.GetScheme(),
+		KafkaConfig: kafkaConfig,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&kafkatopic.ClusterKafkaTopicReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
+		Client:      k8sManager.GetClient(),
+		Scheme:      k8sManager.GetScheme(),
+		KafkaConfig: kafkaConfig,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
