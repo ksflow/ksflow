@@ -99,14 +99,17 @@ var _ = Describe("KafkaConfig controller", func() {
 			Expect(testK8sClient.Patch(ctx, kc, crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
 
 			By("By checking that the config is updated")
-			Eventually(func() (*string, error) {
+			Eventually(func() (string, error) {
 				createdKT := &ksfv1.KafkaTopic{}
 				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
 				if err != nil {
-					return nil, err
+					return "", err
 				}
-				return createdKT.Status.Configs["retention.bytes"], nil
-			}, duration, interval).ShouldNot(BeNil())
+				if createdKT.Status.Configs == nil || createdKT.Status.Configs["retention.bytes"] == nil {
+					return "", errors.New("config or retention.bytes is nil")
+				}
+				return *createdKT.Status.Configs["retention.bytes"], nil
+			}, duration, interval).Should(Equal(retentionBytes))
 		})
 	})
 })
