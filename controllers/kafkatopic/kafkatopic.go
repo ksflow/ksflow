@@ -203,7 +203,11 @@ func topicExists(topicName string, kadmClient *kadm.Client) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return tds.Has(topicName), nil
+	td, ok := tds[topicName]
+	if td.Err == kerr.UnknownTopicOrPartition {
+		return ok, nil
+	}
+	return ok, td.Err
 }
 
 // getTopicInClusterConfiguration retrieves the current observed state for the given topicName by making any necessary calls to Kafka
