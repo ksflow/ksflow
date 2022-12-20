@@ -22,7 +22,6 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kadm"
 	"k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,7 +68,8 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	err = doReconcile(&ktCopy.ObjectMeta, &ktCopy.Status, ktCopySpec, ktCopy, ktCopy.FullTopicName(), kadmClient)
 	if !equality.Semantic.DeepEqual(kt.Finalizers, ktCopy.Finalizers) {
-		if specErr := r.Client.Update(ctx, ktCopy); specErr != nil {
+		kt.SetFinalizers(ktCopy.Finalizers)
+		if specErr := r.Client.Update(ctx, &kt); specErr != nil {
 			if err != nil {
 				err = fmt.Errorf("failed while updating spec: %v: %v", specErr, err)
 			} else {
@@ -77,8 +77,8 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 		}
 	}
-	kt.Status.LastUpdated = metav1.Now()
-	if statusErr := r.Client.Status().Update(ctx, ktCopy); statusErr != nil {
+	ktCopy.Status.DeepCopyInto(&kt.Status)
+	if statusErr := r.Client.Status().Update(ctx, &kt); statusErr != nil {
 		if err != nil {
 			err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
 		} else {

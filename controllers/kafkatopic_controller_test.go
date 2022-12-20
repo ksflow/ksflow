@@ -41,7 +41,7 @@ var _ = Describe("KafkaConfig controller", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When creating empty KafkaTopic", func() {
+	Context("When creating KafkaTopic", func() {
 		It("Should update the topic in Kafka", func() {
 			By("By creating a new KafkaTopic")
 			ctx := context.Background()
@@ -56,7 +56,7 @@ var _ = Describe("KafkaConfig controller", func() {
 				},
 				Spec: ksfv1.KafkaTopicSpec{},
 			}
-			Expect(testK8sClient.Create(ctx, kc)).Should(Succeed())
+			Expect(testK8sClient.Create(ctx, kc.DeepCopy())).Should(Succeed())
 
 			KTNamespacedName := types.NamespacedName{Name: KTName, Namespace: KTNamespace}
 			Eventually(func() bool {
@@ -96,7 +96,7 @@ var _ = Describe("KafkaConfig controller", func() {
 			// add label to trigger reconcile
 			retentionBytes := "1073741824"
 			patchStr := fmt.Sprintf(`{"spec": {"configs": {"retention.bytes": "%s"}}}`, retentionBytes)
-			Expect(testK8sClient.Patch(ctx, kc, crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
+			Expect(testK8sClient.Patch(ctx, kc.DeepCopy(), crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
 
 			By("By checking that the config is updated")
 			Eventually(func() (string, error) {
@@ -110,6 +110,35 @@ var _ = Describe("KafkaConfig controller", func() {
 				}
 				return *createdKT.Status.Configs["retention.bytes"], nil
 			}, duration, interval).Should(Equal(retentionBytes))
+
+			By("By recreating the KafkaTopic")
+			Expect(testK8sClient.Delete(ctx, kc.DeepCopy())).Should(Succeed())
+			Eventually(func() bool {
+				createdKT := &ksfv1.KafkaTopic{}
+				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeFalse())
+			Expect(testK8sClient.Create(ctx, kc.DeepCopy())).Should(Succeed())
+			Eventually(func() bool {
+				createdKT := &ksfv1.KafkaTopic{}
+				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			By("By checking that the KafkaTopic has an Available phase")
+			Eventually(func() (string, error) {
+				createdKT := &ksfv1.KafkaTopic{}
+				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
+				if err != nil {
+					return "", err
+				}
+				return string(createdKT.Status.Phase), nil
+			}, duration, interval).Should(Equal("Available"))
 		})
 	})
 })

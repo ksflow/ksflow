@@ -16,7 +16,7 @@ limitations under the License.
 
 package v1alpha1
 
-// +kubebuilder:validation:Enum="";Creating;Deleting;Available;Error
+// +kubebuilder:validation:Enum="";Updating;Deleting;Available;Error
 
 // KafkaTopicPhase defines the phase of the KafkaTopic
 type KafkaTopicPhase string

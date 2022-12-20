@@ -24,7 +24,6 @@ import (
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kerr"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,16 +43,21 @@ func doReconcile(
 	topicName string,
 	kadmClient *kadm.Client) error {
 
+	status.LastUpdated = metav1.Now()
 	status.Phase = ksfv1.KafkaTopicPhaseUnknown
+	status.Reason = ""
 	if spec.ReclaimPolicy == nil {
-		return errors.New("reclaim policy is required and no defaults found in controller config")
+		status.Reason = "reclaim policy is required and no defaults found in controller config"
+		return errors.New(status.Reason)
 	}
 	status.ReclaimPolicy = spec.ReclaimPolicy
 	if spec.Partitions == nil {
-		return errors.New("topic partitions is required and no defaults found in controller config")
+		status.Reason = "topic partitions is required and no defaults found in controller config"
+		return errors.New(status.Reason)
 	}
 	if spec.ReplicationFactor == nil {
-		return errors.New("topic replication factor is required and no defaults found in controller config")
+		status.Reason = "topic replication factor is required and no defaults found in controller config"
+		return errors.New(status.Reason)
 	}
 
 	// Topic deletion & finalizers
@@ -63,6 +67,7 @@ func doReconcile(
 	ret, err := handleDeletionAndFinalizers(meta, *status.ReclaimPolicy, o, topicName, kadmClient)
 	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseError
+		status.Reason = err.Error()
 		return err
 	}
 	if ret {
@@ -75,6 +80,7 @@ func doReconcile(
 	}
 	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseError
+		status.Reason = err.Error()
 		return err
 	}
 
@@ -83,17 +89,51 @@ func doReconcile(
 	ticc, err = getTopicInClusterConfiguration(topicName, kadmClient)
 	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseError
+		status.Reason = err.Error()
 		return err
 	}
 	if ticc != nil {
 		status.KafkaTopicInClusterConfiguration = *ticc
 	}
-	if !equality.Semantic.DeepDerivative(spec.KafkaTopicInClusterConfiguration, status.KafkaTopicInClusterConfiguration) {
+
+	err = topicIsUpToDate(spec.KafkaTopicInClusterConfiguration, status.KafkaTopicInClusterConfiguration)
+	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseUpdating
-		return fmt.Errorf("status and spec do not match")
+		status.Reason = err.Error()
+		return err
 	}
 
 	status.Phase = ksfv1.KafkaTopicPhaseAvailable
+	return nil
+}
+
+// topicIsUpToDate returns an error indicating why the topic is not up-to-date, or nil if it is up-to-date
+// assumes validation has already run and spec partitions/replicationFactor are non-nil
+// for now it just checks the ones set in the spec. TODO: do better checking for unspecified values in spec.
+func topicIsUpToDate(specKTICC ksfv1.KafkaTopicInClusterConfiguration, statusKTICC ksfv1.KafkaTopicInClusterConfiguration) error {
+	if statusKTICC.Partitions == nil {
+		return fmt.Errorf(`spec partitions %d does not match status partitions "nil"`, *specKTICC.Partitions)
+	}
+	if *specKTICC.Partitions != *statusKTICC.Partitions {
+		return fmt.Errorf(`spec partitions %d does not equal status partitions %d`, *specKTICC.Partitions, *statusKTICC.Partitions)
+	}
+	if statusKTICC.ReplicationFactor == nil {
+		return fmt.Errorf(`spec replicationFactor %d does not match status replicationFactor "nil"`, *specKTICC.ReplicationFactor)
+	}
+	if *specKTICC.ReplicationFactor != *statusKTICC.ReplicationFactor {
+		return fmt.Errorf(`spec replicationFactor %d does not equal status replicationFactor %d`, *specKTICC.ReplicationFactor, *statusKTICC.ReplicationFactor)
+	}
+	// there may be some default configs that are set for Kafka topics, but not in spec.  for now just checking the configs we explicitly set.
+	for k, v := range specKTICC.Configs {
+		if v != nil {
+			if statusKTICC.Configs[k] == nil {
+				return fmt.Errorf(`spec %q config value %q does not equal status config "nil"`, k, *v)
+			}
+			if *statusKTICC.Configs[k] != *v {
+				return fmt.Errorf(`spec %q config value %q does not equal status config %q`, k, *v, *statusKTICC.Configs[k])
+			}
+		}
+	}
 	return nil
 }
 
