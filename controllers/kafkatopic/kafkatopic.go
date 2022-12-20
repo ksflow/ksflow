@@ -199,14 +199,11 @@ func createOrUpdateTopic(
 
 // topicExists returns true if the topic exists
 func topicExists(topicName string, kadmClient *kadm.Client) (bool, error) {
-	tds, err := kadmClient.ListTopics(context.Background(), topicName)
+	tds, err := kadmClient.ListTopics(context.Background())
 	if err != nil {
 		return false, err
 	}
 	td, ok := tds[topicName]
-	if td.Err == kerr.UnknownTopicOrPartition {
-		return ok, nil
-	}
 	return ok, td.Err
 }
 
