@@ -28,9 +28,9 @@ func (ckt *ClusterKafkaTopic) FullTopicName() string {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=ckt
-// +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.spec.partitions`
-// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicationFactor`
-// +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.spec.reclaimPolicy`
+// +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.status.partitions`
+// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicationFactor`
+// +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.status.reclaimPolicy`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`

@@ -27,7 +27,7 @@ EOF
 # the status should show as "Available", indicating the topic was created successfully
 kubectl get kt
 
-# the topics can be listed directly from kafka to verify that a topic named "<your-namespace>.quickstart" exists
+# the topics can be listed directly from kafka
 kubectl exec -n ksflow-quickstart deploy/kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka.ksflow-quickstart.svc.cluster.local:9092 --list --command-config /opt/bitnami/kafka/config/admin.properties"
 
 # details about the topic will show up in the status
