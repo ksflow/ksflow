@@ -112,7 +112,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	rfi16 := int16(3)
+	rfi16 := int16(1)
 	rpolicy := ksfv1.KafkaTopicReclaimPolicyDelete
 	kafkaTopicDefaultsConfig := ksfv1.KafkaTopicSpec{
 		KafkaTopicInClusterConfiguration: ksfv1.KafkaTopicInClusterConfiguration{

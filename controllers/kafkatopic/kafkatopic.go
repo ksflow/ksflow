@@ -153,30 +153,23 @@ func createOrUpdateTopic(
 	return nil
 }
 
-// topicExists checks if the given topic exists in the Kafka cluster
+// topicExists returns true if the topic exists
 func topicExists(topicName string, kadmClient *kadm.Client) (bool, error) {
-	allTopicDetails, err := kadmClient.ListTopics(context.Background())
+	tds, err := kadmClient.ListTopics(context.Background(), topicName)
 	if err != nil {
 		return false, err
 	}
-	td, ok := allTopicDetails[topicName]
-	if !ok || td.Err == kerr.UnknownTopicOrPartition {
-		return false, nil
-	}
-	if td.Err != nil {
-		return false, td.Err
-	}
-	return true, nil
+	return tds.Has(topicName), nil
 }
 
 // getTopicInClusterConfiguration retrieves the current observed state for the given topicName by making any necessary calls to Kafka
 func getTopicInClusterConfiguration(topicName string, kadmClient *kadm.Client) (*ksfv1.KafkaTopicInClusterConfiguration, error) {
 	ktc := ksfv1.KafkaTopicInClusterConfiguration{}
-	allTopicDetails, err := kadmClient.ListTopics(context.Background())
+	tds, err := kadmClient.ListTopics(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	td, ok := allTopicDetails[topicName]
+	td, ok := tds[topicName]
 	if !ok || td.Err == kerr.UnknownTopicOrPartition {
 		return nil, nil
 	}
