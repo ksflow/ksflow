@@ -24,6 +24,7 @@ import (
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kerr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -87,9 +88,12 @@ func doReconcile(
 	if ticc != nil {
 		status.KafkaTopicInClusterConfiguration = *ticc
 	}
+	if !equality.Semantic.DeepDerivative(spec.KafkaTopicInClusterConfiguration, status.KafkaTopicInClusterConfiguration) {
+		status.Phase = ksfv1.KafkaTopicPhaseUpdating
+		return fmt.Errorf("status and spec do not match")
+	}
 
 	status.Phase = ksfv1.KafkaTopicPhaseAvailable
-
 	return nil
 }
 

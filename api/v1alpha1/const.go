@@ -23,7 +23,7 @@ type KafkaTopicPhase string
 
 const (
 	KafkaTopicPhaseUnknown   KafkaTopicPhase = ""
-	KafkaTopicPhaseCreating  KafkaTopicPhase = "Creating"
+	KafkaTopicPhaseUpdating  KafkaTopicPhase = "Updating"
 	KafkaTopicPhaseDeleting  KafkaTopicPhase = "Deleting"
 	KafkaTopicPhaseAvailable KafkaTopicPhase = "Available"
 	KafkaTopicPhaseError     KafkaTopicPhase = "Error"
