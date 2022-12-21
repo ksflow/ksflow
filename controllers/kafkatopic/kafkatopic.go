@@ -25,6 +25,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kerr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -46,6 +47,13 @@ func doReconcile(
 	status.LastUpdated = metav1.Now()
 	status.Phase = ksfv1.KafkaTopicPhaseUnknown
 	status.Reason = ""
+
+	errs := validation.IsDNS1035Label(meta.Name)
+	if len(errs) > 0 {
+		status.Phase = ksfv1.KafkaTopicPhaseError
+		status.Reason = fmt.Sprintf("invalid KafkaTopic name: %q", errs[0])
+		return fmt.Errorf(status.Reason)
+	}
 	if spec.ReclaimPolicy == nil {
 		status.Reason = "reclaim policy is required and no defaults found in controller config"
 		return errors.New(status.Reason)

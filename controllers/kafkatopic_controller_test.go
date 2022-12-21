@@ -110,7 +110,7 @@ var _ = Describe("KafkaConfig controller", func() {
 				}
 				return *createdKT.Status.Configs["retention.bytes"], nil
 			}, duration, interval).Should(Equal(retentionBytes))
-			// TODO: uncomment once bug is fixed in Kafka (can't recreate topics with periods in name when using kraft), reported to their mailing list
+			// TODO: uncomment once bug is fixed in Kafka (can't recreate topics with periods in name when using kraft), fixed in 3.3.2
 			//By("By recreating the KafkaTopic")
 			//Expect(testK8sClient.Delete(ctx, kc.DeepCopy())).Should(Succeed())
 			//Eventually(func() bool {
