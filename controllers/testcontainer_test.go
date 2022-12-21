@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type TestContainerWrapper struct {
@@ -130,38 +129,6 @@ func (t *TestContainerWrapper) RunKafka() error {
 	t.testContainerPort = mPort.Int()
 
 	// consider checking port or logs to verify things start up before returning if it is a problem
-	return nil
-}
-
-func (t *TestContainerWrapper) RunPostgres() error {
-	req := testcontainers.ContainerRequest{
-		Image:        fmt.Sprintf("%s:%s", "postgres", "12"),
-		ExposedPorts: []string{"5432/tcp"},
-		Env: map[string]string{
-			"POSTGRES_USER":     "postgres",
-			"POSTGRES_PASSWORD": "postgres",
-			"POSTGRES_DB":       "postgres",
-		},
-		WaitingFor: wait.ForListeningPort("5432/tcp"),
-		AutoRemove: true,
-	}
-
-	container, err := testcontainers.GenericContainer(context.Background(), testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		return fmt.Errorf("could not create container: %w", err)
-	}
-
-	mPort, err := container.MappedPort(context.Background(), "5432")
-	if err != nil {
-		return fmt.Errorf("could not get mapped port from the container: %w", err)
-	}
-
-	t.testContainer = container
-	t.testContainerPort = mPort.Int()
-
 	return nil
 }
 

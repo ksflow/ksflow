@@ -18,90 +18,77 @@ package controllers
 
 import (
 	"context"
+	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"testing"
 
-	"github.com/ksflow/ksflow/controllers/kafkatopic"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
-
-var testCfg *rest.Config
 var testK8sClient client.Client
 var testEnv *envtest.Environment
 var testCtx context.Context
 var testKafkaContainerWrapper *TestContainerWrapper
-var testPostgresContainerWrapper *TestContainerWrapper
 var testCancel context.CancelFunc
-
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	RunSpecs(t, "Controller Suite")
-}
 
 func currTestDir() string {
 	_, currTestFilename, _, _ := runtime.Caller(0)
 	return path.Dir(currTestFilename)
 }
 
-var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+func TestMain(m *testing.M) {
+	if err := setup(); err != nil {
+		teardown()
+		os.Exit(1)
+	} else {
+		code := m.Run()
+		teardown()
+		os.Exit(code)
+	}
+}
 
+func setup() error {
 	testCtx, testCancel = context.WithCancel(context.TODO())
 
-	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
-	var err error
-	// cfg is defined in this file globally.
-	testCfg, err = testEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(testCfg).NotTo(BeNil())
+	testCfg, err := testEnv.Start()
+	if err != nil {
+		return err
+	}
 
 	testKafkaContainerWrapper = &TestContainerWrapper{}
-	err = testKafkaContainerWrapper.RunKafka()
-	Expect(err).NotTo(HaveOccurred())
-	kafkaBootstrapServers := testKafkaContainerWrapper.GetAddresses()
-	Expect(kafkaBootstrapServers).NotTo(BeEmpty())
+	if err = testKafkaContainerWrapper.RunKafka(); err != nil {
+		return err
+	}
 
-	testPostgresContainerWrapper = &TestContainerWrapper{}
-	err = testPostgresContainerWrapper.RunPostgres()
-	Expect(err).NotTo(HaveOccurred())
-	postgresAddr := testPostgresContainerWrapper.GetAddress()
-	Expect(postgresAddr).NotTo(BeEmpty())
-
-	err = ksfv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
+	if err = ksfv1.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
 
 	// +kubebuilder:scaffold:scheme
 
 	testK8sClient, err = client.New(testCfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(testK8sClient).NotTo(BeNil())
+	if err != nil {
+		return err
+	}
 
 	k8sManager, err := ctrl.NewManager(testCfg, ctrl.Options{Scheme: scheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return err
+	}
 
 	kafkaConnectionConfig := ksfv1.KafkaConnectionConfig{
 		BootstrapServers: testKafkaContainerWrapper.GetAddresses(),
@@ -123,39 +110,36 @@ var _ = BeforeSuite(func() {
 		ReclaimPolicy: &rpolicy,
 	}
 
-	err = (&kafkatopic.KafkaTopicReconciler{
+	err = (&KafkaTopicReconciler{
 		Client:                 k8sManager.GetClient(),
 		Scheme:                 k8sManager.GetScheme(),
 		KafkaConnectionConfig:  kafkaConnectionConfig,
 		KafkaTopicSpecDefaults: kafkaTopicDefaultsConfig,
 	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return err
+	}
 
-	err = (&kafkatopic.ClusterKafkaTopicReconciler{
+	err = (&ClusterKafkaTopicReconciler{
 		Client:                 k8sManager.GetClient(),
 		Scheme:                 k8sManager.GetScheme(),
 		KafkaConnectionConfig:  kafkaConnectionConfig,
 		KafkaTopicSpecDefaults: kafkaTopicDefaultsConfig,
 	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return err
+	}
 
 	go func() {
-		defer GinkgoRecover()
-		err = k8sManager.Start(testCtx)
-		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+		if err = k8sManager.Start(testCtx); err != nil {
+			panic(err)
+		}
 	}()
+	return nil
+}
 
-})
-
-var _ = AfterSuite(func() {
+func teardown() {
 	testCancel()
-	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
-
-	err = testKafkaContainerWrapper.CleanUp()
-	Expect(err).NotTo(HaveOccurred())
-
-	err = testPostgresContainerWrapper.CleanUp()
-	Expect(err).NotTo(HaveOccurred())
-})
+	_ = testEnv.Stop()
+	_ = testKafkaContainerWrapper.CleanUp()
+}

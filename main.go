@@ -20,7 +20,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/ksflow/ksflow/controllers/kafkatopic"
+	"github.com/ksflow/ksflow/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -84,7 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&kafkatopic.KafkaTopicReconciler{
+	if err = (&controllers.KafkaTopicReconciler{
 		Client:                 mgr.GetClient(),
 		Scheme:                 mgr.GetScheme(),
 		KafkaConnectionConfig:  ksflowConfig.KafkaConnectionConfig,
@@ -93,7 +93,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaTopic")
 		os.Exit(1)
 	}
-	if err = (&kafkatopic.ClusterKafkaTopicReconciler{
+	if err = (&controllers.ClusterKafkaTopicReconciler{
 		Client:                 mgr.GetClient(),
 		Scheme:                 mgr.GetScheme(),
 		KafkaConnectionConfig:  ksflowConfig.KafkaConnectionConfig,

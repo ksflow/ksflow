@@ -18,127 +18,58 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"testing"
 	"time"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("KafkaConfig controller", func() {
+const (
+	KTName      = "test-kt"
+	KTNamespace = "default"
 
-	const (
-		KTName      = "test-kt"
-		KTNamespace = "default"
+	duration = time.Second * 10
+	interval = time.Millisecond * 250
+)
 
-		timeout  = time.Second * 10
-		duration = time.Second * 10
-		interval = time.Millisecond * 250
-	)
+var (
+	ktNamespacedName = types.NamespacedName{Name: KTName, Namespace: KTNamespace}
+	kc               = &ksfv1.KafkaTopic{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "ksflow.io/v1alpha1",
+			Kind:       "KafkaTopic",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      KTName,
+			Namespace: KTNamespace,
+		},
+		Spec: ksfv1.KafkaTopicSpec{},
+	}
+)
 
-	Context("When creating KafkaTopic", func() {
-		It("Should update the topic in Kafka", func() {
-			By("By creating a new KafkaTopic")
-			ctx := context.Background()
-			kc := &ksfv1.KafkaTopic{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "ksflow.io/v1alpha1",
-					Kind:       "KafkaTopic",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      KTName,
-					Namespace: KTNamespace,
-				},
-				Spec: ksfv1.KafkaTopicSpec{},
-			}
-			Expect(testK8sClient.Create(ctx, kc.DeepCopy())).Should(Succeed())
+func TestReconcile(t *testing.T) {
+	t.Run("create and update KafkaTopic", func(t *testing.T) {
+		ctx := context.Background()
+		assert.NoError(t, testK8sClient.Create(ctx, kc.DeepCopy()))
+		createdKT := &ksfv1.KafkaTopic{}
+		assert.Eventually(t, func() bool {
+			return testK8sClient.Get(ctx, ktNamespacedName, createdKT) == nil && createdKT.Status.ReclaimPolicy != nil
+		}, duration, interval)
+		assert.Equal(t, ksfv1.KafkaTopicReclaimPolicyDelete, *createdKT.Status.ReclaimPolicy)
+		assert.Equal(t, ksfv1.KafkaTopicPhaseAvailable, createdKT.Status.Phase)
 
-			KTNamespacedName := types.NamespacedName{Name: KTName, Namespace: KTNamespace}
-			Eventually(func() bool {
-				createdKT := &ksfv1.KafkaTopic{}
-				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
-				if err != nil {
-					return false
-				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-
-			By("By checking that the KafkaTopic has a Delete Reclaim policy")
-			Eventually(func() (string, error) {
-				createdKT := &ksfv1.KafkaTopic{}
-				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
-				if err != nil {
-					return "", err
-				}
-				if createdKT.Status.ReclaimPolicy == nil {
-					return "", errors.New("reclaim policy is nil")
-				}
-				return string(*createdKT.Status.ReclaimPolicy), nil
-			}, duration, interval).Should(Equal("Delete"))
-
-			By("By checking that the KafkaTopic has an Available phase")
-			Eventually(func() (string, error) {
-				createdKT := &ksfv1.KafkaTopic{}
-				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
-				if err != nil {
-					return "", err
-				}
-				return string(createdKT.Status.Phase), nil
-			}, duration, interval).Should(Equal("Available"))
-
-			By("By updating a topic config")
-
-			// add label to trigger reconcile
-			retentionBytes := "1073741824"
-			patchStr := fmt.Sprintf(`{"spec": {"configs": {"retention.bytes": "%s"}}}`, retentionBytes)
-			Expect(testK8sClient.Patch(ctx, kc.DeepCopy(), crclient.RawPatch(types.MergePatchType, []byte(patchStr)))).Should(Succeed())
-
-			By("By checking that the config is updated")
-			Eventually(func() (string, error) {
-				createdKT := &ksfv1.KafkaTopic{}
-				err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
-				if err != nil {
-					return "", err
-				}
-				if createdKT.Status.Configs == nil || createdKT.Status.Configs["retention.bytes"] == nil {
-					return "", errors.New("config or retention.bytes is nil")
-				}
-				return *createdKT.Status.Configs["retention.bytes"], nil
-			}, duration, interval).Should(Equal(retentionBytes))
-			// TODO: uncomment once bug is fixed in Kafka (can't recreate topics with periods in name when using kraft), fixed in 3.3.2
-			//By("By recreating the KafkaTopic")
-			//Expect(testK8sClient.Delete(ctx, kc.DeepCopy())).Should(Succeed())
-			//Eventually(func() bool {
-			//	createdKT := &ksfv1.KafkaTopic{}
-			//	err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
-			//	if err != nil {
-			//		return false
-			//	}
-			//	return true
-			//}, timeout, interval).Should(BeFalse())
-			//Expect(testK8sClient.Create(ctx, kc.DeepCopy())).Should(Succeed())
-			//Eventually(func() bool {
-			//	createdKT := &ksfv1.KafkaTopic{}
-			//	err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
-			//	if err != nil {
-			//		return false
-			//	}
-			//	return true
-			//}, timeout, interval).Should(BeTrue())
-			//By("By checking that the KafkaTopic has an Available phase")
-			//Eventually(func() (string, error) {
-			//	createdKT := &ksfv1.KafkaTopic{}
-			//	err := testK8sClient.Get(ctx, KTNamespacedName, createdKT)
-			//	if err != nil {
-			//		return "", err
-			//	}
-			//	return string(createdKT.Status.Phase), nil
-			//}, duration, interval).Should(Equal("Available"))
-		})
+		retentionBytes := "1073741824"
+		patchStr := fmt.Sprintf(`{"spec": {"configs": {"retention.bytes": "%s"}}}`, retentionBytes)
+		assert.NoError(t, testK8sClient.Patch(ctx, kc.DeepCopy(), crclient.RawPatch(types.MergePatchType, []byte(patchStr))))
+		updatedKT := &ksfv1.KafkaTopic{}
+		assert.Eventually(t, func() bool {
+			return testK8sClient.Get(ctx, ktNamespacedName, updatedKT) == nil && updatedKT.Status.Configs["retention.bytes"] != nil
+		}, duration, interval)
+		assert.Equal(t, retentionBytes, *updatedKT.Status.Configs["retention.bytes"])
 	})
-})
+}
