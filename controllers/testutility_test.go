@@ -100,27 +100,15 @@ func setup() error {
 	}
 
 	rfi16 := int16(1)
-	rpolicy := ksfv1.KafkaTopicReclaimPolicyDelete
 	kafkaTopicDefaultsConfig := ksfv1.KafkaTopicSpec{
 		KafkaTopicInClusterConfiguration: ksfv1.KafkaTopicInClusterConfiguration{
 			Partitions:        pointer.Int32(2),
 			ReplicationFactor: &rfi16,
 			Configs:           nil,
 		},
-		ReclaimPolicy: &rpolicy,
 	}
 
 	err = (&KafkaTopicReconciler{
-		Client:                 k8sManager.GetClient(),
-		Scheme:                 k8sManager.GetScheme(),
-		KafkaConnectionConfig:  kafkaConnectionConfig,
-		KafkaTopicSpecDefaults: kafkaTopicDefaultsConfig,
-	}).SetupWithManager(k8sManager)
-	if err != nil {
-		return err
-	}
-
-	err = (&ClusterKafkaTopicReconciler{
 		Client:                 k8sManager.GetClient(),
 		Scheme:                 k8sManager.GetScheme(),
 		KafkaConnectionConfig:  kafkaConnectionConfig,

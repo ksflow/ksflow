@@ -69,7 +69,7 @@ type KsflowConfig struct {
 	// KafkaConnectionConfig provides values for connecting to the Kafka cluster
 	KafkaConnectionConfig KafkaConnectionConfig `json:"kafkaConnection"`
 
-	// KafkaTopicDefaults provides default values for any KafkaTopic or ClusterKafkaTopic
+	// KafkaTopicDefaults provides default values for any KafkaTopic
 	KafkaTopicDefaultsConfig KafkaTopicSpec `json:"kafkaTopicDefaults,omitempty"`
 }
 

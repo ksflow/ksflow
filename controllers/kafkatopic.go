@@ -35,7 +35,7 @@ const (
 	FinalizerName = "kafka-topic.ksflow.io/finalizer"
 )
 
-// doReconcile handles reconciliation of KafkaTopic and ClusterKafkaTopics
+// doReconcile handles reconciliation of KafkaTopic
 func doReconcile(
 	meta *metav1.ObjectMeta,
 	status *ksfv1.KafkaTopicStatus,
@@ -54,11 +54,6 @@ func doReconcile(
 		status.Reason = fmt.Sprintf("invalid KafkaTopic name: %q", errs[0])
 		return fmt.Errorf(status.Reason)
 	}
-	if spec.ReclaimPolicy == nil {
-		status.Reason = "reclaim policy is required and no defaults found in controller config"
-		return errors.New(status.Reason)
-	}
-	status.ReclaimPolicy = spec.ReclaimPolicy
 	if spec.Partitions == nil {
 		status.Reason = "topic partitions is required and no defaults found in controller config"
 		return errors.New(status.Reason)
@@ -72,7 +67,7 @@ func doReconcile(
 	if !meta.DeletionTimestamp.IsZero() {
 		status.Phase = ksfv1.KafkaTopicPhaseDeleting
 	}
-	ret, err := handleDeletionAndFinalizers(meta, *status.ReclaimPolicy, o, topicName, kadmClient)
+	ret, err := handleDeletionAndFinalizers(meta, o, topicName, kadmClient)
 	if err != nil {
 		status.Phase = ksfv1.KafkaTopicPhaseError
 		status.Reason = err.Error()
@@ -149,7 +144,6 @@ func topicIsUpToDate(specKTICC ksfv1.KafkaTopicInClusterConfiguration, statusKTI
 // returns false if processing should continue, true if we should finish reconcile
 func handleDeletionAndFinalizers(
 	meta *metav1.ObjectMeta,
-	reclaimPolicy ksfv1.KafkaTopicReclaimPolicy,
 	o client.Object,
 	topicName string,
 	kadmClient *kadm.Client) (bool, error) {
@@ -162,10 +156,8 @@ func handleDeletionAndFinalizers(
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(o, FinalizerName) {
 			// our finalizer is present, so lets handle any external dependency
-			if reclaimPolicy == ksfv1.KafkaTopicReclaimPolicyDelete {
-				if err := deleteTopicFromKafka(topicName, kadmClient); err != nil {
-					return true, err
-				}
+			if err := deleteTopicFromKafka(topicName, kadmClient); err != nil {
+				return true, err
 			}
 			exists, err := topicExists(topicName, kadmClient)
 			if err != nil {

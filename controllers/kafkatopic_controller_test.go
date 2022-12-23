@@ -58,9 +58,8 @@ func TestReconcile(t *testing.T) {
 		assert.NoError(t, testK8sClient.Create(ctx, kc.DeepCopy()))
 		createdKT := &ksfv1.KafkaTopic{}
 		assert.Eventually(t, func() bool {
-			return testK8sClient.Get(ctx, ktNamespacedName, createdKT) == nil && createdKT.Status.ReclaimPolicy != nil
+			return testK8sClient.Get(ctx, ktNamespacedName, createdKT) == nil && createdKT.Status.Phase != ksfv1.KafkaTopicPhaseUnknown
 		}, duration, interval)
-		assert.Equal(t, ksfv1.KafkaTopicReclaimPolicyDelete, *createdKT.Status.ReclaimPolicy)
 		assert.Equal(t, ksfv1.KafkaTopicPhaseAvailable, createdKT.Status.Phase)
 
 		retentionBytes := "1073741824"

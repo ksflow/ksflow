@@ -84,17 +84,11 @@ type KafkaTopicSpec struct {
 
 	// +optional
 	KafkaTopicInClusterConfiguration `json:",inline"`
-
-	// ReclaimPolicy defines what should happen to the underlying kafka topic if the KafkaTopic is deleted.
-	// +optional
-	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
 }
 
 // KafkaTopicStatus defines the observed state of KafkaTopic
 type KafkaTopicStatus struct {
 	KafkaTopicInClusterConfiguration `json:",inline"`
-
-	ReclaimPolicy *KafkaTopicReclaimPolicy `json:"reclaimPolicy,omitempty"`
 
 	Phase       KafkaTopicPhase `json:"phase,omitempty"`
 	Reason      string          `json:"reason,omitempty"`
@@ -106,7 +100,6 @@ type KafkaTopicStatus struct {
 // +kubebuilder:resource:shortName=kt
 // +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.status.partitions`
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicationFactor`
-// +kubebuilder:printcolumn:name="ReclaimPolicy",type=string,JSONPath=`.status.reclaimPolicy`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`

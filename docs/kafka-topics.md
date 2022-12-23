@@ -1,6 +1,4 @@
-## Kafka Topics
-
-### KafkaTopic (kt)
+## Kafka Topic (kt)
 
 A `KafkaTopic` defines a topic in the Kafka cluster that the ksflow controller is configured to use.
 Below is an example KafkaTopic.
@@ -12,11 +10,6 @@ metadata:
   name: my-topic
   namespace: my-ns
 spec:
-  # (Optional) What should happen to the underlying kafka topic if the KafkaTopic is deleted
-  # Must be either "Retain" or "Delete"
-  # Default is set in helm chart to "Delete".
-  reclaimPolicy: Retain
-  
   # (Optional) The number of partitions in the topic
   # Must be >= 1
   # Defaults is set in helm chart to 1.
@@ -41,19 +34,3 @@ To deal with this, each KafkaTopic will result in an actual topic name of `<name
 The above example will therefore create a topic named "my-ns.my-topic".
 
 Both the KafkaTopic name and namespace must conform to [RFC 1035](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names).
-
-### ClusterKafkaTopic (ckt)
-
-A `ClusterKafkaTopic` is the same as a KafkaTopic, the only difference being that it has a cluster scope.
-Below is a minimal example ClusterKafkaTopic.
-
-```yaml
-apiVersion: ksflow.io/v1alpha1
-kind: ClusterKafkaTopic
-metadata:
-  name: my-cluster-kafka-topic
-spec: {}
-```
-
-The above ClusterKafkaTopic will result in a topic named "my-cluster-kafka-topic" in Kafka.
-As with KafkaTopics, ClusterKafkaTopic names must conform to RFC 1035.

@@ -28,12 +28,3 @@ const (
 	KafkaTopicPhaseAvailable KafkaTopicPhase = "Available"
 	KafkaTopicPhaseError     KafkaTopicPhase = "Error"
 )
-
-// +kubebuilder:validation:Enum=Delete;Retain
-
-type KafkaTopicReclaimPolicy string
-
-const (
-	KafkaTopicReclaimPolicyDelete KafkaTopicReclaimPolicy = "Delete"
-	KafkaTopicReclaimPolicyRetain KafkaTopicReclaimPolicy = "Retain"
-)
