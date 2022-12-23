@@ -18,13 +18,13 @@ package v1alpha1
 
 // +kubebuilder:validation:Enum="";Updating;Deleting;Available;Error
 
-// KafkaTopicPhase defines the phase of the KafkaTopic
-type KafkaTopicPhase string
+// KsflowPhase defines the phase
+type KsflowPhase string
 
 const (
-	KafkaTopicPhaseUnknown   KafkaTopicPhase = ""
-	KafkaTopicPhaseUpdating  KafkaTopicPhase = "Updating"
-	KafkaTopicPhaseDeleting  KafkaTopicPhase = "Deleting"
-	KafkaTopicPhaseAvailable KafkaTopicPhase = "Available"
-	KafkaTopicPhaseError     KafkaTopicPhase = "Error"
+	KsflowPhaseUnknown   KsflowPhase = ""
+	KsflowPhaseUpdating  KsflowPhase = "Updating"
+	KsflowPhaseDeleting  KsflowPhase = "Deleting"
+	KsflowPhaseAvailable KsflowPhase = "Available"
+	KsflowPhaseError     KsflowPhase = "Error"
 )

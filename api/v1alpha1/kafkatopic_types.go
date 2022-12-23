@@ -81,7 +81,6 @@ type KafkaTopicInClusterConfiguration struct {
 
 // KafkaTopicSpec defines the desired state of KafkaTopic
 type KafkaTopicSpec struct {
-
 	// +optional
 	KafkaTopicInClusterConfiguration `json:",inline"`
 }
@@ -90,9 +89,9 @@ type KafkaTopicSpec struct {
 type KafkaTopicStatus struct {
 	KafkaTopicInClusterConfiguration `json:",inline"`
 
-	Phase       KafkaTopicPhase `json:"phase,omitempty"`
-	Reason      string          `json:"reason,omitempty"`
-	LastUpdated metav1.Time     `json:"lastUpdated,omitempty"`
+	Phase       KsflowPhase `json:"phase,omitempty"`
+	Reason      string      `json:"reason,omitempty"`
+	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // +kubebuilder:object:root=true

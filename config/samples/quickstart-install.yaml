@@ -462,7 +462,7 @@ spec:
                   minimum: 1
                   type: integer
                 phase:
-                  description: KafkaTopicPhase defines the phase of the KafkaTopic
+                  description: KsflowPhase defines the phase of the KafkaTopic
                   enum:
                     - ""
                     - Updating

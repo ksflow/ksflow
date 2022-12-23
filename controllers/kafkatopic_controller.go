@@ -105,14 +105,13 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 // reconcileTopic handles reconciliation of KafkaTopic
 func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error {
-
 	kafkaTopic.Status.LastUpdated = metav1.Now()
-	kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseUnknown
+	kafkaTopic.Status.Phase = ksfv1.KsflowPhaseUnknown
 	kafkaTopic.Status.Reason = ""
 
 	errs := validation.IsDNS1035Label(kafkaTopic.Name)
 	if len(errs) > 0 {
-		kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseError
+		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
 		kafkaTopic.Status.Reason = fmt.Sprintf("invalid KafkaTopic name: %q", errs[0])
 		return fmt.Errorf(kafkaTopic.Status.Reason)
 	}
@@ -127,11 +126,11 @@ func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error
 
 	// Topic deletion & finalizers
 	if !kafkaTopic.DeletionTimestamp.IsZero() {
-		kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseDeleting
+		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseDeleting
 	}
 	ret, err := handleTopicDeletionAndFinalizers(kafkaTopic, kadmClient)
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseError
+		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
 		kafkaTopic.Status.Reason = err.Error()
 		return err
 	}
@@ -144,7 +143,7 @@ func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error
 		return err
 	}
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseError
+		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
 		kafkaTopic.Status.Reason = err.Error()
 		return err
 	}
@@ -153,7 +152,7 @@ func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error
 	var ticc *ksfv1.KafkaTopicInClusterConfiguration
 	ticc, err = getTopicInClusterConfiguration(kafkaTopic.FullTopicName(), kadmClient)
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseError
+		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
 		kafkaTopic.Status.Reason = err.Error()
 		return err
 	}
@@ -163,12 +162,12 @@ func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error
 
 	err = topicIsUpToDate(kafkaTopic.Spec.KafkaTopicInClusterConfiguration, kafkaTopic.Status.KafkaTopicInClusterConfiguration)
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseUpdating
+		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseUpdating
 		kafkaTopic.Status.Reason = err.Error()
 		return err
 	}
 
-	kafkaTopic.Status.Phase = ksfv1.KafkaTopicPhaseAvailable
+	kafkaTopic.Status.Phase = ksfv1.KsflowPhaseAvailable
 	return nil
 }
 

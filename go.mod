@@ -3,6 +3,8 @@ module github.com/ksflow/ksflow
 go 1.19
 
 require (
+	github.com/onsi/ginkgo/v2 v2.6.0
+	github.com/onsi/gomega v1.24.1
 	github.com/stretchr/testify v1.8.0
 	github.com/testcontainers/testcontainers-go v0.15.0
 	github.com/twmb/franz-go v1.10.4
