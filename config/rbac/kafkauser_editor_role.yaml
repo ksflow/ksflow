@@ -1,20 +1,20 @@
-# permissions for end users to edit kafkaservices.
+# permissions for end users to edit kafkausers.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: kafkaservice-editor-role
+    app.kubernetes.io/instance: kafkauser-editor-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ksflow
     app.kubernetes.io/part-of: ksflow
     app.kubernetes.io/managed-by: kustomize
-  name: kafkaservice-editor-role
+  name: kafkauser-editor-role
 rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - kafkaservices
+  - kafkausers
   verbs:
   - create
   - delete
@@ -26,6 +26,6 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - kafkaservices/status
+  - kafkausers/status
   verbs:
   - get

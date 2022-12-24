@@ -1,20 +1,20 @@
-# permissions for end users to view kafkaservices.
+# permissions for end users to view kafkausers.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: kafkaservice-viewer-role
+    app.kubernetes.io/instance: kafkauser-viewer-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ksflow
     app.kubernetes.io/part-of: ksflow
     app.kubernetes.io/managed-by: kustomize
-  name: kafkaservice-viewer-role
+  name: kafkauser-viewer-role
 rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - kafkaservices
+  - kafkausers
   verbs:
   - get
   - list
@@ -22,6 +22,6 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
-  - kafkaservices/status
+  - kafkausers/status
   verbs:
   - get

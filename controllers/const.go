@@ -17,6 +17,6 @@ limitations under the License.
 package controllers
 
 const (
-	KafkaServiceFinalizerName = "kafka-service.ksflow.io/finalizer"
-	KafkaTopicFinalizerName   = "kafka-topic.ksflow.io/finalizer"
+	KafkaUserFinalizerName  = "kafka-service.ksflow.io/finalizer"
+	KafkaTopicFinalizerName = "kafka-topic.ksflow.io/finalizer"
 )

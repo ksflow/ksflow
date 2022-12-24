@@ -285,6 +285,11 @@ data:
         cert: "/kafka-certs/tls.crt"
         key: "/kafka-certs/tls.key"
         ca: "/kafka-certs/ca.crt"
+      certificateSigningRequest:
+        subject:
+          commonNameTemplate: "{{ .Name }}.{{ .Namespace }}.ku.cluster.local"
+        signerName: kubernetes.io/kube-apiserver-client
+        expirationSeconds: 86400
     kafkaTopicDefaults:
       partitions: 1
       replicationFactor: 1
@@ -300,9 +305,9 @@ roleRef:
   kind: ClusterRole
   name: ksflow-controller
 subjects:
-  - kind: ServiceAccount
-    name: ksflow-controller
-    namespace: ksflow-quickstart
+- kind: ServiceAccount
+  name: ksflow-controller
+  namespace: ksflow-quickstart
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -359,19 +364,21 @@ metadata:
   name: ksflow-controller
   namespace: ksflow-quickstart
 rules:
-  - apiGroups:
-    - ksflow.io
-    resources:
-    - kafkatopics
-    - kafkatopics/status
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkatopics
+  - kafkatopics/status
+  - kafkausers
+  - kafkausers/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition

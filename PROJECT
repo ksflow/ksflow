@@ -28,7 +28,7 @@ resources:
   controller: true
   domain: io
   group: ksflow
-  kind: KafkaService
+  kind: KafkaUser
   path: github.com/ksflow/ksflow/api/v1alpha1
   version: v1alpha1
 version: "3"

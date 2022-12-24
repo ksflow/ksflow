@@ -95,12 +95,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaTopic")
 		os.Exit(1)
 	}
-	if err = (&controllers.KafkaServiceReconciler{
+	if err = (&controllers.KafkaUserReconciler{
 		Client:                mgr.GetClient(),
 		Scheme:                mgr.GetScheme(),
 		KafkaConnectionConfig: ksflowConfig.KafkaConnectionConfig,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KafkaService")
+		setupLog.Error(err, "unable to create controller", "controller", "KafkaUser")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

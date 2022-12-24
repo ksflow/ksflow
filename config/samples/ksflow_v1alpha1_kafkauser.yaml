@@ -1,12 +1,12 @@
 apiVersion: ksflow.io/v1alpha1
-kind: KafkaService
+kind: KafkaUser
 metadata:
   labels:
-    app.kubernetes.io/name: kafkaservice
-    app.kubernetes.io/instance: kafkaservice-sample
+    app.kubernetes.io/name: kafkauser
+    app.kubernetes.io/instance: kafkauser-sample
     app.kubernetes.io/part-of: ksflow
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: ksflow
-  name: kafkaservice-sample
+  name: kafkauser-sample
 spec:
   # TODO(user): Add fields here

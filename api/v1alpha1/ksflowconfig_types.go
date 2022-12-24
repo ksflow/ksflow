@@ -50,12 +50,47 @@ type KafkaTLSConfig struct {
 	CAFilePath string `json:"ca"`
 }
 
+type X509Subject struct {
+	// CommonName is a go-template of the common name used for the certificate
+	// example: {{ .Name }}.{{ .Namespace }}.ku.cluster.local
+	CommonNameTemplate string `json:"commonNameTemplate"`
+	// +optional
+	Countries []string `json:"countries,omitempty"`
+	// +optional
+	Organizations []string `json:"organizations,omitempty"`
+	// +optional
+	OrganizationalUnits []string `json:"organizationalUnits,omitempty"`
+	// +optional
+	Localities []string `json:"localities,omitempty"`
+	// +optional
+	Provinces []string `json:"provinces,omitempty"`
+	// +optional
+	StreetAddresses []string `json:"streetAddresses,omitempty"`
+	// +optional
+	PostalCodes []string `json:"postalCodes,omitempty"`
+}
+
+type KafkaCSRConfig struct {
+	// Subject is the X509 subject name specification
+	Subject X509Subject `json:"subject"`
+	// SignerName indicates the requested signer, and is a qualified name.
+	// ref: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
+	SignerName string `json:"signerName"`
+	// ExpirationSeconds is the requested duration of validity of the issued certificate.
+	// ref: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
+	// +optional
+	ExpirationSeconds *int32 `json:"expirationSeconds,omitempty"`
+}
+
 type KafkaConnectionConfig struct {
 	// BootstrapServers provides the list of initial Kafka brokers to connect to
 	BootstrapServers []string `json:"bootstrapServers"`
 
 	// KafkaTLSConfig provides certificates for connecting to Kafka over mutual TLS
 	KafkaTLSConfig KafkaTLSConfig `json:"tls"`
+
+	// CertificateSigningRequestConfig provides configuration for the CertificateSigningRequest
+	KafkaCSRConfig KafkaCSRConfig `json:"certificateSigningRequest"`
 }
 
 //+kubebuilder:object:root=true
