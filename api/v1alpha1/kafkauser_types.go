@@ -23,26 +23,19 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (ku *KafkaUser) CertificateSigningRequestNamespacedName() types.NamespacedName {
+func (ku *KafkaUser) CertificateSigningRequestName() types.NamespacedName {
 	// uses periods, since they aren't allowed for namespaces or for the name of kafka users
-	return types.NamespacedName{Name: fmt.Sprintf("ksflow.ku.%s.%s", ku.Namespace, ku.Name)}
+	return types.NamespacedName{Name: fmt.Sprintf("io.ksflow.kafka-user.%s.%s", ku.Namespace, ku.Name)}
 }
-
-func (ku *KafkaUser) SecretName() string {
-	if ku.Spec.SecretName != nil {
-		return *ku.Spec.SecretName
-	}
-	return fmt.Sprintf("ksflow-ku-%s", ku.Name)
+func (ku *KafkaUser) SecretName() types.NamespacedName {
+	return types.NamespacedName{Namespace: ku.Namespace, Name: fmt.Sprintf("io.ksflow.kafka-user.%s", ku.Name)}
 }
-func (ku *KafkaUser) SecretNamespacedName() types.NamespacedName {
-	return types.NamespacedName{Namespace: ku.Namespace, Name: ku.SecretName()}
+func (ku *KafkaUser) TemporarySecretName() types.NamespacedName {
+	return types.NamespacedName{Namespace: ku.Namespace, Name: fmt.Sprintf("io.ksflow.kafka-user.temporary.%s", ku.Name)}
 }
 
 // KafkaUserSpec defines the desired state of KafkaUser
 type KafkaUserSpec struct {
-	// Secret name in which to store credentials, otherwise defaults to "ksflow-ku-<KAFKA_USER_NAME>".
-	// +optional
-	SecretName *string `json:"secretName,omitempty"`
 }
 
 // KafkaUserStatus defines the observed state of KafkaUser

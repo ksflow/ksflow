@@ -46,6 +46,8 @@ import (
 const (
 	SecretRootCAKey           = "ca.crt"
 	SecretBootstrapServersKey = "bootstrap.servers"
+
+	UserResourceLabelKey = "ksflow.io/kafka-user"
 )
 
 type KafkaUserReconciler struct {
@@ -105,11 +107,15 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 		return fmt.Errorf(ku.Status.Reason)
 	}
 
-	// Ensure secret exists
-	var secret corev1.Secret
-	if err := r.Get(ctx, ku.SecretNamespacedName(), &secret); err != nil {
+	// TODO: get secret
+	// if not exist, get
+	// TODO
+
+	// Ensure temporary secret exists
+	var tmpSecret corev1.Secret
+	if err := r.Get(ctx, ku.TemporarySecretNamespacedName(), &tmpSecret); err != nil {
 		if apierrors.IsNotFound(err) {
-			s, serr := r.getNewUserSecret(ctx, ku)
+			s, serr := r.getNewTemporarySecret(ctx, ku)
 			if serr != nil {
 				ku.Status.Phase = ksfv1.KsflowPhaseError
 				ku.Status.Reason = serr.Error()
@@ -120,8 +126,8 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 				ku.Status.Reason = serr.Error()
 				return fmt.Errorf(ku.Status.Reason)
 			}
-			ku.Status.Phase = ksfv1.KsflowPhaseAvailable
-			return nil
+			ku.Status.Reason = "private key generated"
+			ku.Status.Phase = ksfv1.KsflowPhaseCreating
 		} else {
 			ku.Status.Phase = ksfv1.KsflowPhaseError
 			ku.Status.Reason = err.Error()
@@ -154,8 +160,58 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 	return nil
 }
 
-// gets a new user's secret
-func (r *KafkaUserReconciler) getNewUserSecret(ctx context.Context, ku *ksfv1.KafkaUser) (*corev1.Secret, error) {
+func (r *KafkaUserReconciler) getPrivateKey(ctx context.Context, ku *ksfv1.KafkaUser) (*rsa.PrivateKey, error) {
+	// try to get from main secret if it exists
+	privatekey, err := r.getPrivateKeyFromSecret(ctx, ku.SecretName())
+	if err != nil {
+		return nil, err
+	}
+	if privatekey != nil {
+		return privatekey, nil
+	}
+	// next try to get from temporary secret if it exists
+	privatekey, err = r.getPrivateKeyFromSecret(ctx, ku.TemporarySecretName())
+	if err != nil {
+		return nil, err
+	}
+	if privatekey != nil {
+		return privatekey, nil
+	}
+
+	// neither secret has what we need, so go ahead and create one in the temporary secret
+	// TODO
+	var secret corev1.Secret
+	if err := r.Get(ctx, ku.SecretName(), &secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			if terr := r.Get(ctx, ku.TemporarySecretName(), &secret); terr != nil {
+				if apierrors.IsNotFound(terr) {
+
+				} else {
+					return nil, err
+				}
+			}
+		} else {
+			return nil, err
+		}
+	}
+}
+
+// getPrivateKeyFromSecret gets the private key from the secret if the secret is found, if not found returns nil
+// returns error if failed for any other reason
+func (r *KafkaUserReconciler) getPrivateKeyFromSecret(ctx context.Context, secretName types.NamespacedName) (*rsa.PrivateKey, error) {
+	var secret corev1.Secret
+	if err := r.Get(ctx, secretName, &secret); err != nil {
+		return nil, client.IgnoreNotFound(err)
+	}
+	privateKeyBytes := secret.Data[corev1.TLSPrivateKeyKey]
+	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+	return privateKey, nil
+}
+
+func (r *KafkaUserReconciler) getNewTemporarySecret(ctx context.Context, ku *ksfv1.KafkaUser) (*corev1.Secret, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
@@ -165,6 +221,26 @@ func (r *KafkaUserReconciler) getNewUserSecret(ctx context.Context, ku *ksfv1.Ka
 	if err != nil {
 		return nil, err
 	}
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ku.TemporarySecretName().Name,
+			Namespace: ku.TemporarySecretName().Namespace,
+			Labels: map[string]string{
+				UserResourceLabelKey: ku.Name,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			corev1.TLSPrivateKeyKey:   privateKeyBytes,
+			SecretRootCAKey:           caBytes,
+			SecretBootstrapServersKey: []byte(strings.Join(r.KafkaConnectionConfig.BootstrapServers, ",")),
+		},
+	}, nil
+}
+
+// gets a new user's secret
+func (r *KafkaUserReconciler) getNewSecret(ctx context.Context, ku *ksfv1.KafkaUser) (*corev1.Secret, error) {
+
 	certBytes, err := r.getNewUserCertificate(ctx, privateKey, ku)
 	if err != nil {
 		return nil, err
@@ -173,6 +249,9 @@ func (r *KafkaUserReconciler) getNewUserSecret(ctx context.Context, ku *ksfv1.Ka
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ku.SecretNamespacedName().Name,
 			Namespace: ku.SecretNamespacedName().Namespace,
+			Labels: map[string]string{
+				UserResourceLabelKey: ku.Name,
+			},
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
@@ -200,6 +279,9 @@ func (r *KafkaUserReconciler) getNewUserCertificate(ctx context.Context, pkey *r
 	csr := &certv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ku.CertificateSigningRequestNamespacedName().Name,
+			Labels: map[string]string{
+				UserResourceLabelKey: fmt.Sprintf("%s.%s", ku.Name, ku.Namespace),
+			},
 		},
 		Spec: certv1.CertificateSigningRequestSpec{
 			Request: pem.EncodeToMemory(&pem.Block{
@@ -281,7 +363,6 @@ func (r *KafkaUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// setup
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ksfv1.KafkaUser{}).
-		Owns(&certv1.CertificateSigningRequest{}).
 		Owns(&corev1.Secret{}).
 		Complete(r)
 }

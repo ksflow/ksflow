@@ -23,6 +23,7 @@ type KsflowPhase string
 
 const (
 	KsflowPhaseUnknown   KsflowPhase = ""
+	KsflowPhaseCreating  KsflowPhase = "Creating"
 	KsflowPhaseUpdating  KsflowPhase = "Updating"
 	KsflowPhaseDeleting  KsflowPhase = "Deleting"
 	KsflowPhaseAvailable KsflowPhase = "Available"
