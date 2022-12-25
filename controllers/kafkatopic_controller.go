@@ -36,6 +36,10 @@ import (
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
 
+const (
+	KafkaTopicFinalizerName = "kafka-topic.ksflow.io/finalizer"
+)
+
 type KafkaTopicReconciler struct {
 	client.Client
 	Scheme                 *runtime.Scheme
@@ -103,12 +107,13 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, err
 }
 
-// reconcileTopic handles reconciliation of KafkaTopic
+// reconcileTopic handles reconciliation of a KafkaTopic
 func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error {
 	kafkaTopic.Status.LastUpdated = metav1.Now()
 	kafkaTopic.Status.Phase = ksfv1.KsflowPhaseUnknown
 	kafkaTopic.Status.Reason = ""
 
+	// Validate the KafkaTopic
 	errs := validation.IsDNS1035Label(kafkaTopic.Name)
 	if len(errs) > 0 {
 		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
@@ -138,7 +143,7 @@ func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error
 		return nil
 	}
 
-	// Topic create or update
+	// Create or update topic
 	if err = createOrUpdateTopic(&kafkaTopic.Spec.KafkaTopicInClusterConfiguration, kafkaTopic.FullTopicName(), kadmClient); err != nil {
 		return err
 	}

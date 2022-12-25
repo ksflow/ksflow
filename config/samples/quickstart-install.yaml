@@ -288,6 +288,8 @@ data:
       certificateSigningRequest:
         subject:
           commonNameTemplate: "{{ .Name }}.{{ .Namespace }}.ku.cluster.local"
+          organizations: ["ksflow"]
+          organizationUnits: ["quickstart"]
         signerName: kubernetes.io/kube-apiserver-client
         expirationSeconds: 86400
     kafkaTopicDefaults:
