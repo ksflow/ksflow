@@ -23,6 +23,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"strings"
@@ -184,114 +185,70 @@ func (r *KafkaUserReconciler) getNewUserSecret(ctx context.Context, ku *ksfv1.Ka
 }
 
 func (r *KafkaUserReconciler) getNewUserCertificate(ctx context.Context, pkey *rsa.PrivateKey, ku *ksfv1.KafkaUser) ([]byte, error) {
-	// Get CertificateSigningRequest
-	var csr certv1.CertificateSigningRequest
-	if err := r.Get(ctx, ku.CertificateSigningRequestNamespacedName(), &csr); err != nil {
-		if apierrors.IsNotFound(err) {
-			if csr.Status.Certificate != nil {
-
-			}
-			// TODO: create & return
-		} else {
-			logger.Error(err, "unable to get CertificateSigningRequest")
-			return ctrl.Result{}, err
-		}
-	}
-	// TODO implement
-}
-
-func secretNeedsUpdating(secret *corev1.Secret) (bool, error) {
-	// TODO implement
-}
-
-func foo() {
-	// Get CertificateSigningRequest
-	var csr certv1.CertificateSigningRequest
-	if err := r.Get(ctx, ku.CertificateSigningRequestNamespacedName(), &csr); err != nil {
-		if apierrors.IsNotFound(err) {
-			if csr.Status.Certificate != nil {
-
-			}
-			// TODO: create & return
-		} else {
-			logger.Error(err, "unable to get CertificateSigningRequest")
-			return ctrl.Result{}, err
-		}
-	}
-}
-
-func (r *KafkaUserReconciler) getCSR(ctx context.Context, ku *ksfv1.KafkaUser) (*certv1.CertificateSigningRequest, error) {
-	var csr certv1.CertificateSigningRequest
-	err := r.Get(ctx, ku.CertificateSigningRequestNamespacedName(), &csr)
+	subject, err := r.certificateSigningRequestPKIXName(ku)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			csr = certv1.CertificateSigningRequest{
-				TypeMeta:   metav1.TypeMeta{},
-				ObjectMeta: metav1.ObjectMeta{},
-				Spec:       certv1.CertificateSigningRequestSpec{},
-				Status:     certv1.CertificateSigningRequestStatus{},
+		return nil, err
+	}
+	certificateRequest := x509.CertificateRequest{
+		Subject:            subject,
+		SignatureAlgorithm: x509.SHA256WithRSA,
+	}
+	certificateRequestBytes, err := x509.CreateCertificateRequest(rand.Reader, &certificateRequest, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	csr := &certv1.CertificateSigningRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ku.CertificateSigningRequestNamespacedName().Name,
+		},
+		Spec: certv1.CertificateSigningRequestSpec{
+			Request: pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE REQUEST",
+				Bytes: certificateRequestBytes,
+			}),
+			SignerName:        r.KafkaConnectionConfig.KafkaCSRConfig.SignerName,
+			ExpirationSeconds: r.KafkaConnectionConfig.KafkaCSRConfig.ExpirationSeconds,
+			Usages:            []certv1.KeyUsage{certv1.UsageClientAuth},
+		},
+	}
+	err = r.Create(ctx, csr)
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			if derr := r.Delete(ctx, csr); derr != nil {
+				return nil, derr
 			}
-			if cerr := r.Create(ctx, &csr); cerr != nil {
+			if cerr := r.Create(ctx, csr); cerr != nil {
 				return nil, cerr
 			}
 		} else {
 			return nil, err
 		}
 	}
-	return &csr, nil
+	csr.Status.Conditions = append(csr.Status.Conditions, certv1.CertificateSigningRequestCondition{
+		Type:           certv1.CertificateApproved,
+		Reason:         "User is valid",
+		Message:        "Approved by ksflow user controller",
+		LastUpdateTime: metav1.Now(),
+	})
+	err = r.Update(ctx, csr)
+	if err != nil {
+		return nil, err
+	}
+	var signedCSR certv1.CertificateSigningRequest
+	// TODO: how do we know this has been signed?  async...
+	err = r.Get(ctx, ku.CertificateSigningRequestNamespacedName(), &signedCSR)
+	if err != nil {
+		return nil, err
+	}
+	if signedCSR.Status.Certificate == nil {
+		return nil, fmt.Errorf("certificate from CSR was not signed")
+	}
+	return signedCSR.Status.Certificate, nil
 }
 
-//func (r *KafkaUserReconciler) getSecret(ctx context.Context, ku *ksfv1.KafkaUser) (*corev1.Secret, error) {
-//	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-//	if err != nil {
-//		return nil, err
-//	}
-//	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-//	if err != nil {
-//		return nil, err
-//	}
-//	subject, err := r.certificateSigningRequestPKIXName(ku)
-//	if err != nil {
-//		return nil, err
-//	}
-//	certificateRequest := x509.CertificateRequest{
-//		Subject:            subject,
-//		SignatureAlgorithm: x509.SHA256WithRSA,
-//	}
-//	certificateRequestBytes, err := x509.CreateCertificateRequest(rand.Reader, &certificateRequest, privateKey)
-//	if err != nil {
-//		return nil, err
-//	}
-//	csr := &certv1.CertificateSigningRequest{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Name: ku.CertificateSigningRequestName(),
-//		},
-//		Spec: certv1.CertificateSigningRequestSpec{
-//			Request: pem.EncodeToMemory(&pem.Block{
-//				Type:  "CERTIFICATE REQUEST",
-//				Bytes: certificateRequestBytes,
-//			}),
-//			SignerName:        r.KafkaConnectionConfig.KafkaCSRConfig.SignerName,
-//			ExpirationSeconds: r.KafkaConnectionConfig.KafkaCSRConfig.ExpirationSeconds,
-//			Usages:            []certv1.KeyUsage{certv1.UsageClientAuth},
-//		},
-//	}
-//	err = r.Create(ctx, csr)
-//	if err != nil {
-//		return nil, err
-//	}
-//	csr.Status.Conditions = append(csr.Status.Conditions, certv1.CertificateSigningRequestCondition{
-//		Type:           certv1.CertificateApproved,
-//		Reason:         "User is valid",
-//		Message:        "Approved by ksflow user controller",
-//		LastUpdateTime: metav1.Now(),
-//	})
-//	err = r.Update(ctx, csr)
-//	if err != nil {
-//		return nil, err
-//	}
-//	signedCsr, err = r.Get(ctx, &csr)
-//}
+func secretNeedsUpdating(secret *corev1.Secret) (bool, error) {
+	// TODO implement, how do we know since it's different each time?
+}
 
 func (r *KafkaUserReconciler) certificateSigningRequestPKIXName(ku *ksfv1.KafkaUser) (pkix.Name, error) {
 	var tplBytes bytes.Buffer

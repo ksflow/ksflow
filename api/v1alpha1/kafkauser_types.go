@@ -23,12 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (ku *KafkaUser) CertificateSigningRequestName() string {
-	// uses periods, since they aren't allowed for namespaces or for the name of kafka users
-	return fmt.Sprintf("ksflow.ku.%s.%s", ku.Namespace, ku.Name)
-}
 func (ku *KafkaUser) CertificateSigningRequestNamespacedName() types.NamespacedName {
-	return types.NamespacedName{Name: ku.CertificateSigningRequestName()}
+	// uses periods, since they aren't allowed for namespaces or for the name of kafka users
+	return types.NamespacedName{Name: fmt.Sprintf("ksflow.ku.%s.%s", ku.Namespace, ku.Name)}
 }
 
 func (ku *KafkaUser) SecretName() string {
