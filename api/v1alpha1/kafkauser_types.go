@@ -17,34 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
-	"strings"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
-
-func KafkaUserNameFromCSRName(n string) *types.NamespacedName {
-	if !strings.HasPrefix(n, "io.ksflow.kafka-user.") {
-		return nil
-	}
-	unsplitNamespacedName := strings.TrimPrefix(n, "io.ksflow.kafka-user.")
-	splitNamespacedName := strings.Split(unsplitNamespacedName, ".")
-	if len(splitNamespacedName) != 2 {
-		return nil
-	}
-	return &types.NamespacedName{Namespace: splitNamespacedName[0], Name: splitNamespacedName[1]}
-}
-func (ku *KafkaUser) CertificateSigningRequestName() types.NamespacedName {
-	// uses periods, since they aren't allowed for namespaces or for the name of kafka users
-	return types.NamespacedName{Name: fmt.Sprintf("io.ksflow.kafka-user.%s.%s", ku.Namespace, ku.Name)}
-}
-func (ku *KafkaUser) SecretName() types.NamespacedName {
-	return types.NamespacedName{Namespace: ku.Namespace, Name: fmt.Sprintf("io.ksflow.kafka-user.%s", ku.Name)}
-}
-func (ku *KafkaUser) TemporarySecretName() types.NamespacedName {
-	return types.NamespacedName{Namespace: ku.Namespace, Name: fmt.Sprintf("io.ksflow.kafka-user.temporary.%s", ku.Name)}
-}
 
 // KafkaUserSpec defines the desired state of KafkaUser
 type KafkaUserSpec struct {
@@ -52,14 +26,16 @@ type KafkaUserSpec struct {
 
 // KafkaUserStatus defines the observed state of KafkaUser
 type KafkaUserStatus struct {
-	Phase       KsflowPhase `json:"phase,omitempty"`
-	Reason      string      `json:"reason,omitempty"`
-	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
+	KafkaPrincipal string      `json:"kafkaPrincipal,omitempty"`
+	Phase          KsflowPhase `json:"phase,omitempty"`
+	Reason         string      `json:"reason,omitempty"`
+	LastUpdated    metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=ku
+// +kubebuilder:printcolumn:name="Principal",type=string,JSONPath=`.status.kafkaPrincipal`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`

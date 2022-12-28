@@ -3,14 +3,20 @@
 #### Prerequisites
 * Kubernetes (i.e. [k3d](https://k3d.io/v5.4.6/#installation), [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation), etc.)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+* [helm](https://helm.sh/docs/intro/install/)
 
 #### Install
 ```shell
-# install cert-manager
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.10.1/cert-manager.yaml
+# install kafka
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install kafka bitnami/kafka \
+  --set persistence.enabled=false \
+  --set zookeeper.persistence.enabled=false
 
-# install self-signed certs, kafka, ksflow
-kubectl apply -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-install.yaml
+# install ksflow
+helm repo add ksflow https://ksflow.github.io/ksflow-helm
+helm install ksflow ksflow/ksflow \
+  --set "kafka.bootstrapServers={kafka-0:9092}"
 ```
 
 #### Create a Topic
@@ -20,15 +26,17 @@ kubectl apply -f - <<EOF
 apiVersion: ksflow.io/v1alpha1
 kind: KafkaTopic
 metadata:
-  name: quickstart
-spec: {}
+  name: ksflow-quickstart
+spec:
+  partitions: 1
+  replicationFactor: 1
 EOF
 
 # the status should show as "Available", indicating the topic was created successfully
 kubectl get kt
 
-# the topics can be listed directly from kafka
-kubectl exec -n ksflow-quickstart deploy/kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka.ksflow-quickstart.svc.cluster.local:9092 --list --command-config /opt/bitnami/kafka/config/admin.properties"
+# topics can be listed using the kafka client shell scripts
+kubectl exec sts/kafka -- /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
 # details about the topic will show up in the status
 kubectl get kt quickstart -oyaml
@@ -37,17 +45,17 @@ kubectl get kt quickstart -oyaml
 #### Delete the Topic
 ```shell
 # delete the KafkaTopic
-kubectl delete kt quickstart
+kubectl delete kt ksflow-quickstart
 
 # verify the topic was deleted from kafka
-kubectl exec -n ksflow-quickstart deploy/kafka -- /bin/sh -c "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka.ksflow-quickstart.svc.cluster.local:9092 --list --command-config /opt/bitnami/kafka/config/admin.properties"
+kubectl exec sts/kafka -- /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 ```
 
 #### Uninstall
 ```shell
 # uninstall ksflow
-kubectl delete -f https://raw.githubusercontent.com/ksflow/ksflow/main/config/samples/quickstart-install.yaml
+helm uninstall ksflow
 
-# uninstall cert-manager
-kubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.10.1/cert-manager.yaml
+# uninstall kafka
+helm uninstall kafka
 ```

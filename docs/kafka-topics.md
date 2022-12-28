@@ -12,17 +12,19 @@ metadata:
 spec:
   # The number of partitions in the topic
   # Must be >= 1
-  # Default can be set in controller config, which helm chart sets to 1 by default (broker's "num.partitions" config is not used)
+  # Default can be set in controller config, broker's "num.partitions" config is not used
+  # Required if no default is specified in controller config
   partitions: 10
   
   # The number of replicas for each of the topic's partitions
   # Must be >= 1
-  # Default can be set in controller config, which helm chart sets to 1 by default (broker's "default.replication.factor" config is not used)
+  # Default can be set in controller config, broker's "default.replication.factor" config is not used
+  # Required if no default is specified in controller config
   replicationFactor: 3
   
-  # The configs for the topic, for all available configs see: https://kafka.apache.org/documentation/#topicconfigs
+  # (Optional) The configs for the topic, for all available configs see: https://kafka.apache.org/documentation/#topicconfigs
   # Both keys and values must be strings
-  # Default can be set in controller config, which helm chart sets to {} by default
+  # Defaults for each config can be set in controller config
   configs:
     retention.ms: "86400000" # 1 day
     retention.bytes: "1073741824" # 1 GiB
@@ -33,4 +35,4 @@ KafkaTopics in Kubernetes are namespaced, meaning that multiple KafkaTopics can 
 To accommodate this, each KafkaTopic will result in an actual topic name of `<namespace>.<name>` in Kafka.
 The above example will therefore create a topic named "my-ns.my-topic".
 
-Both the KafkaTopic name and namespace must conform to [RFC 1035](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names).
+The KafkaTopic name must conform to [RFC 1035](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names).

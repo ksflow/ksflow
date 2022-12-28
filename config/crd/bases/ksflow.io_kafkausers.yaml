@@ -5,24 +5,21 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: kafkatopics.ksflow.io
+  name: kafkausers.ksflow.io
 spec:
   group: ksflow.io
   names:
-    kind: KafkaTopic
-    listKind: KafkaTopicList
-    plural: kafkatopics
+    kind: KafkaUser
+    listKind: KafkaUserList
+    plural: kafkausers
     shortNames:
-    - kt
-    singular: kafkatopic
+    - ku
+    singular: kafkauser
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.partitions
-      name: Partitions
-      type: string
-    - jsonPath: .status.replicationFactor
-      name: Replicas
+    - jsonPath: .status.kafkaPrincipal
+      name: Principal
       type: string
     - jsonPath: .status.phase
       name: Status
@@ -36,7 +33,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: KafkaTopic is the Schema for the kafkatopics API
+        description: KafkaUser is the Schema for the kafkausers API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -51,42 +48,16 @@ spec:
           metadata:
             type: object
           spec:
-            description: KafkaTopicSpec defines the desired state of KafkaTopic
-            properties:
-              configs:
-                additionalProperties:
-                  type: string
-                description: 'Configs contains the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
-                  All values are specified as strings'
-                type: object
-              partitions:
-                description: Partitions is the number of partitions in the topic.
-                format: int32
-                minimum: 1
-                type: integer
-              replicationFactor:
-                description: ReplicationFactor is the number of replicas for each
-                  of the topic's partitions.
-                minimum: 1
-                type: integer
+            description: KafkaUserSpec defines the desired state of KafkaUser
             type: object
           status:
-            description: KafkaTopicStatus defines the observed state of KafkaTopic
+            description: KafkaUserStatus defines the observed state of KafkaUser
             properties:
-              configs:
-                additionalProperties:
-                  type: string
-                description: 'Configs contains the configs for the topic, see: https://kafka.apache.org/documentation/#topicconfigs
-                  All values are specified as strings'
-                type: object
+              kafkaPrincipal:
+                type: string
               lastUpdated:
                 format: date-time
                 type: string
-              partitions:
-                description: Partitions is the number of partitions in the topic.
-                format: int32
-                minimum: 1
-                type: integer
               phase:
                 description: KsflowPhase defines the phase
                 enum:
@@ -98,11 +69,6 @@ spec:
                 type: string
               reason:
                 type: string
-              replicationFactor:
-                description: ReplicationFactor is the number of replicas for each
-                  of the topic's partitions.
-                minimum: 1
-                type: integer
             type: object
         type: object
     served: true

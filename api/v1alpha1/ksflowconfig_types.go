@@ -18,79 +18,24 @@ package v1alpha1
 
 import (
 	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/twmb/tlscfg"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
 
 // NewClient retrieves a Kafka client from the KafkaConfig
 func (kcc *KafkaConnectionConfig) NewClient() (*kgo.Client, error) {
-	tc, err := tlscfg.New(
-		tlscfg.WithDiskCA(kcc.KafkaTLSConfig.CAFilePath, tlscfg.ForClient),
-		tlscfg.WithDiskKeyPair(kcc.KafkaTLSConfig.CertFilePath, kcc.KafkaTLSConfig.KeyFilePath),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return kgo.NewClient(
-		kgo.SeedBrokers(kcc.BootstrapServers...),
-		kgo.DialTLSConfig(tc),
-	)
-}
-
-type KafkaTLSConfig struct {
-	// CertFilePath is the path to the file holding the client-side TLS certificate to use
-	CertFilePath string `json:"cert"`
-
-	// KeyFilePath is the path to the file holding the client’s private key
-	KeyFilePath string `json:"key"`
-
-	// CAFilePath is the path to the file containing certificate authority certificates to use
-	// in verifying a presented server certificate
-	CAFilePath string `json:"ca"`
-}
-
-type X509Subject struct {
-	// CommonName is a go-template of the common name used for the certificate
-	// example: {{ .Name }}.{{ .Namespace }}.ku.cluster.local
-	CommonNameTemplate string `json:"commonNameTemplate"`
-	// +optional
-	Countries []string `json:"countries,omitempty"`
-	// +optional
-	Organizations []string `json:"organizations,omitempty"`
-	// +optional
-	OrganizationalUnits []string `json:"organizationalUnits,omitempty"`
-	// +optional
-	Localities []string `json:"localities,omitempty"`
-	// +optional
-	Provinces []string `json:"provinces,omitempty"`
-	// +optional
-	StreetAddresses []string `json:"streetAddresses,omitempty"`
-	// +optional
-	PostalCodes []string `json:"postalCodes,omitempty"`
-}
-
-type KafkaCSRConfig struct {
-	// Subject is the X509 subject name specification
-	Subject X509Subject `json:"subject"`
-	// SignerName indicates the requested signer, and is a qualified name.
-	// ref: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
-	SignerName string `json:"signerName"`
-	// ExpirationSeconds is the requested duration of validity of the issued certificate.
-	// ref: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
-	// +optional
-	ExpirationSeconds *int32 `json:"expirationSeconds,omitempty"`
+	return kgo.NewClient(kgo.SeedBrokers(kcc.BootstrapServers...))
 }
 
 type KafkaConnectionConfig struct {
 	// BootstrapServers provides the list of initial Kafka brokers to connect to
 	BootstrapServers []string `json:"bootstrapServers"`
 
-	// KafkaTLSConfig provides certificates for connecting to Kafka over mutual TLS
-	KafkaTLSConfig KafkaTLSConfig `json:"tls"`
-
-	// CertificateSigningRequestConfig provides configuration for the CertificateSigningRequest
-	KafkaCSRConfig KafkaCSRConfig `json:"certificateSigningRequest"`
+	// PrincipalTemplate contains a Go Template that maps KafkaUser information to a Principal
+	// Currently {{ .Name }} and {{ .Namespace }} are available within the template
+	// Defaults to "User:ANONYMOUS"
+	// +optional
+	PrincipalTemplate *string `json:"principalTemplate"`
 }
 
 //+kubebuilder:object:root=true

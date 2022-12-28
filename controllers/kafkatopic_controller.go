@@ -178,7 +178,7 @@ func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error
 
 // topicIsUpToDate returns an error indicating why the topic is not up-to-date, or nil if it is up-to-date
 // assumes validation has already run and spec partitions/replicationFactor are non-nil
-// for now it just checks the ones set in the spec. TODO: do better checking for unspecified values in spec.
+// for now it just checks the ones set in the spec. TODO: check for unspecified values in spec (i.e. removed defaults or removed configs in spec)
 func topicIsUpToDate(specKTICC ksfv1.KafkaTopicInClusterConfiguration, statusKTICC ksfv1.KafkaTopicInClusterConfiguration) error {
 	if statusKTICC.Partitions == nil {
 		return fmt.Errorf(`spec partitions %d does not match status partitions "nil"`, *specKTICC.Partitions)

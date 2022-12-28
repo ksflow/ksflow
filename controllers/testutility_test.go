@@ -92,11 +92,6 @@ func setup() error {
 
 	kafkaConnectionConfig := ksfv1.KafkaConnectionConfig{
 		BootstrapServers: testKafkaContainerWrapper.GetAddresses(),
-		KafkaTLSConfig: ksfv1.KafkaTLSConfig{
-			CertFilePath: path.Join(currTestDir(), "testdata", "certs", "test-ksflow-controller.crt"),
-			KeyFilePath:  path.Join(currTestDir(), "testdata", "certs", "test-ksflow-controller.key"),
-			CAFilePath:   path.Join(currTestDir(), "testdata", "certs", "test-root-ca.crt"),
-		},
 	}
 
 	rfi16 := int16(1)
