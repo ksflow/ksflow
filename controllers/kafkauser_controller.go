@@ -37,8 +37,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 )
@@ -79,9 +84,9 @@ func (r *KafkaUserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Reconcile
 	kuCopy := ku.DeepCopy()
 	err := r.reconcileUser(ctx, kuCopy)
+	kuCopy.Status.DeepCopyInto(&ku.Status)
 
 	// Update in-cluster status
-	kuCopy.Status.DeepCopyInto(&ku.Status)
 	if statusErr := r.Client.Status().Update(ctx, &ku); statusErr != nil {
 		if err != nil {
 			err = fmt.Errorf("failed while updating status: %v: %v", statusErr, err)
@@ -107,13 +112,13 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 		return fmt.Errorf(ku.Status.Reason)
 	}
 
-	// TODO: get secret
-	// if not exist, get
-	// TODO
+	//TODO: check if secret exists and is valid
+	//TODO: check if csr exists and is valid
+	//TODO: check if tmp-secret exists and is valid
 
 	// Ensure temporary secret exists
 	var tmpSecret corev1.Secret
-	if err := r.Get(ctx, ku.TemporarySecretNamespacedName(), &tmpSecret); err != nil {
+	if err := r.Get(ctx, ku.TemporarySecretName(), &tmpSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			s, serr := r.getNewTemporarySecret(ctx, ku)
 			if serr != nil {
@@ -126,8 +131,9 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 				ku.Status.Reason = serr.Error()
 				return fmt.Errorf(ku.Status.Reason)
 			}
-			ku.Status.Reason = "private key generated"
 			ku.Status.Phase = ksfv1.KsflowPhaseCreating
+			ku.Status.Reason = "waiting for signer to sign certificate"
+			return nil
 		} else {
 			ku.Status.Phase = ksfv1.KsflowPhaseError
 			ku.Status.Reason = err.Error()
@@ -247,8 +253,8 @@ func (r *KafkaUserReconciler) getNewSecret(ctx context.Context, ku *ksfv1.KafkaU
 	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ku.SecretNamespacedName().Name,
-			Namespace: ku.SecretNamespacedName().Namespace,
+			Name:      ku.SecretName().Name,
+			Namespace: ku.SecretName().Namespace,
 			Labels: map[string]string{
 				UserResourceLabelKey: ku.Name,
 			},
@@ -278,7 +284,7 @@ func (r *KafkaUserReconciler) getNewUserCertificate(ctx context.Context, pkey *r
 	}
 	csr := &certv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ku.CertificateSigningRequestNamespacedName().Name,
+			Name: ku.CertificateSigningRequestName().Name,
 			Labels: map[string]string{
 				UserResourceLabelKey: fmt.Sprintf("%s.%s", ku.Name, ku.Namespace),
 			},
@@ -290,7 +296,10 @@ func (r *KafkaUserReconciler) getNewUserCertificate(ctx context.Context, pkey *r
 			}),
 			SignerName:        r.KafkaConnectionConfig.KafkaCSRConfig.SignerName,
 			ExpirationSeconds: r.KafkaConnectionConfig.KafkaCSRConfig.ExpirationSeconds,
-			Usages:            []certv1.KeyUsage{certv1.UsageClientAuth},
+			Usages: []certv1.KeyUsage{
+				certv1.UsageDigitalSignature,
+				certv1.UsageClientAuth,
+			},
 		},
 	}
 	err = r.Create(ctx, csr)
@@ -318,7 +327,7 @@ func (r *KafkaUserReconciler) getNewUserCertificate(ctx context.Context, pkey *r
 	}
 	var signedCSR certv1.CertificateSigningRequest
 	// TODO: how do we know this has been signed?  async...
-	err = r.Get(ctx, ku.CertificateSigningRequestNamespacedName(), &signedCSR)
+	err = r.Get(ctx, ku.CertificateSigningRequestName(), &signedCSR)
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +341,7 @@ func secretNeedsUpdating(secret *corev1.Secret) (bool, error) {
 	// TODO implement, how do we know since it's different each time?
 }
 
+// certificateSigningRequestPKIXName builds a pkix Name for the certificate using templates from controller config
 func (r *KafkaUserReconciler) certificateSigningRequestPKIXName(ku *ksfv1.KafkaUser) (pkix.Name, error) {
 	var tplBytes bytes.Buffer
 	err := r.CommonNameTemplate.Execute(&tplBytes, types.NamespacedName{Namespace: ku.Namespace, Name: ku.Name})
@@ -351,6 +361,20 @@ func (r *KafkaUserReconciler) certificateSigningRequestPKIXName(ku *ksfv1.KafkaU
 	}, nil
 }
 
+// findObjectsForCertificateSigningRequest is used to map CSRs to KafkaUsers to reconcile
+func (r *KafkaUserReconciler) findObjectsForCertificateSigningRequest(csr client.Object) []reconcile.Request {
+	kuName := ksfv1.KafkaUserNameFromCSRName(csr.GetName())
+	if kuName == nil {
+		return []reconcile.Request{}
+	}
+	var ku ksfv1.KafkaUser
+	err := r.Get(context.TODO(), *kuName, &ku)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+	return []reconcile.Request{{NamespacedName: *kuName}}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KafkaUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// parse template for common name to fail fast and also not build template every time
@@ -364,5 +388,10 @@ func (r *KafkaUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ksfv1.KafkaUser{}).
 		Owns(&corev1.Secret{}).
+		Watches(
+			&source.Kind{Type: &certv1.CertificateSigningRequest{}},
+			handler.EnqueueRequestsFromMapFunc(r.findObjectsForCertificateSigningRequest),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
 }
