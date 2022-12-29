@@ -98,8 +98,7 @@ func setup() error {
 	}
 
 	kafkaConnectionConfig := ksfv1.KafkaConnectionConfig{
-		BootstrapServers:  testKafkaContainerWrapper.GetAddresses(false),
-		PrincipalTemplate: pointer.String("CN={{ .Name }}.{{ .Namespace }}.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US"),
+		BootstrapServers: testKafkaContainerWrapper.GetAddresses(false),
 	}
 
 	rfi16 := int16(1)
@@ -112,19 +111,24 @@ func setup() error {
 	}
 
 	err = (&KafkaTopicReconciler{
-		Client:                 k8sManager.GetClient(),
-		Scheme:                 k8sManager.GetScheme(),
-		KafkaConnectionConfig:  kafkaConnectionConfig,
-		KafkaTopicSpecDefaults: kafkaTopicDefaultsConfig,
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		KafkaTopicConfig: ksfv1.KafkaTopicConfig{
+			KafkaConnectionConfig:    kafkaConnectionConfig,
+			NameTemplate:             "{{ .Namespace }}.{{ .Name }}",
+			KafkaTopicDefaultsConfig: kafkaTopicDefaultsConfig,
+		},
 	}).SetupWithManager(k8sManager)
 	if err != nil {
 		return err
 	}
 
 	err = (&KafkaUserReconciler{
-		Client:                k8sManager.GetClient(),
-		Scheme:                k8sManager.GetScheme(),
-		KafkaConnectionConfig: kafkaConnectionConfig,
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		KafkaUserConfig: ksfv1.KafkaUserConfig{
+			NameTemplate: "CN={{ .Name }}.{{ .Namespace }}.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US",
+		},
 	}).SetupWithManager(k8sManager)
 	if err != nil {
 		return err

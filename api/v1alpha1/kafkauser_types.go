@@ -17,8 +17,21 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"bytes"
+	"text/template"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+// FinalName is the actual Kafka topic name used on the Kafka cluster
+func (ku *KafkaUser) FinalName(tpl *template.Template) (string, error) {
+	var tplBytes bytes.Buffer
+	if err := tpl.Execute(&tplBytes, types.NamespacedName{Namespace: ku.Namespace, Name: ku.Name}); err != nil {
+		return "", err
+	}
+	return tplBytes.String(), nil
+}
 
 // KafkaUserSpec defines the desired state of KafkaUser
 type KafkaUserSpec struct {
@@ -26,16 +39,16 @@ type KafkaUserSpec struct {
 
 // KafkaUserStatus defines the observed state of KafkaUser
 type KafkaUserStatus struct {
-	KafkaPrincipal string      `json:"kafkaPrincipal,omitempty"`
-	Phase          KsflowPhase `json:"phase,omitempty"`
-	Reason         string      `json:"reason,omitempty"`
-	LastUpdated    metav1.Time `json:"lastUpdated,omitempty"`
+	UserName    string      `json:"userName,omitempty"`
+	Phase       KsflowPhase `json:"phase,omitempty"`
+	Reason      string      `json:"reason,omitempty"`
+	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=ku
-// +kubebuilder:printcolumn:name="Principal",type=string,JSONPath=`.status.kafkaPrincipal`
+// +kubebuilder:printcolumn:name="User",type=string,JSONPath=`.status.userName`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`

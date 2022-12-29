@@ -17,15 +17,22 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"bytes"
 	"encoding/json"
+	"text/template"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
-// FullTopicName is the actual Kafka topic name used on the Kafka cluster
-func (kt *KafkaTopic) FullTopicName() string {
-	return kt.Namespace + "." + kt.Name
+// FinalName is the actual Kafka topic name used on the Kafka cluster
+func (kt *KafkaTopic) FinalName(tpl *template.Template) (string, error) {
+	var tplBytes bytes.Buffer
+	if err := tpl.Execute(&tplBytes, types.NamespacedName{Namespace: kt.Namespace, Name: kt.Name}); err != nil {
+		return "", err
+	}
+	return tplBytes.String(), nil
 }
 
 // WithDefaultsFrom creates a KafkaTopicSpec using the provided KafkaTopicSpecs
@@ -89,6 +96,7 @@ type KafkaTopicSpec struct {
 type KafkaTopicStatus struct {
 	KafkaTopicInClusterConfiguration `json:",inline"`
 
+	TopicName   string      `json:"topicName,omitempty"`
 	Phase       KsflowPhase `json:"phase,omitempty"`
 	Reason      string      `json:"reason,omitempty"`
 	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
@@ -97,6 +105,7 @@ type KafkaTopicStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kt
+// +kubebuilder:printcolumn:name="Topic",type=string,JSONPath=`.status.topicName`
 // +kubebuilder:printcolumn:name="Partitions",type=string,JSONPath=`.status.partitions`
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicationFactor`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`

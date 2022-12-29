@@ -17,8 +17,8 @@ limitations under the License.
 package controllers
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -26,7 +26,6 @@ import (
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,9 +34,9 @@ import (
 
 type KafkaUserReconciler struct {
 	client.Client
-	Scheme                 *runtime.Scheme
-	KafkaConnectionConfig  ksfv1.KafkaConnectionConfig
-	KafkaPrincipalTemplate *template.Template
+	Scheme          *runtime.Scheme
+	KafkaUserConfig ksfv1.KafkaUserConfig
+	NameTemplate    *template.Template
 }
 
 //+kubebuilder:rbac:groups=ksflow.io,resources=kafkausers,verbs=get;list;watch;create;update;patch;delete
@@ -85,16 +84,14 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 		return fmt.Errorf(ku.Status.Reason)
 	}
 
-	// Compute the Kafka principal if it exists
-	if r.KafkaPrincipalTemplate != nil {
-		var tplBytes bytes.Buffer
-		if err := r.KafkaPrincipalTemplate.Execute(&tplBytes, types.NamespacedName{Namespace: ku.Namespace, Name: ku.Name}); err != nil {
-			ku.Status.Phase = ksfv1.KsflowPhaseError
-			ku.Status.Reason = fmt.Sprintf("unable to render Kafka principal from template: %q", err)
-			return fmt.Errorf(ku.Status.Reason)
-		}
-		ku.Status.KafkaPrincipal = tplBytes.String()
+	// Compute the Kafka user name
+	finalUserName, err := ku.FinalName(r.NameTemplate)
+	if err != nil {
+		ku.Status.Phase = ksfv1.KsflowPhaseError
+		ku.Status.Reason = fmt.Sprintf("unable to render Kafka user from template: %q", err)
+		return fmt.Errorf(ku.Status.Reason)
 	}
+	ku.Status.UserName = finalUserName
 
 	// Return
 	ku.Status.Phase = ksfv1.KsflowPhaseAvailable
@@ -103,20 +100,21 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KafkaUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// parse template for principal to fail fast and also not build template every time
-	if r.KafkaConnectionConfig.PrincipalTemplate != nil && len(*r.KafkaConnectionConfig.PrincipalTemplate) > 0 {
-		ptString := *r.KafkaConnectionConfig.PrincipalTemplate
-		// basic check for basic misconfiguration
-		if strings.HasPrefix(ptString, "User:") || strings.HasPrefix(ptString, "Group:") {
-			return fmt.Errorf("principal template should not begin with principal type: %q", ptString)
-		}
-		var err error
-		if r.KafkaPrincipalTemplate, err = template.New("kafka-principal").Parse(ptString); err != nil {
-			return err
-		}
+	ntString := r.KafkaUserConfig.NameTemplate
+	if len(ntString) == 0 {
+		return errors.New("nameTemplate for kafkaUsers was empty")
 	}
 
-	// setup
+	// basic check for basic misconfiguration
+	if strings.HasPrefix(ntString, "User:") || strings.HasPrefix(ntString, "Group:") {
+		return fmt.Errorf("template should not begin with principal type: %q", ntString)
+	}
+
+	var err error
+	if r.NameTemplate, err = template.New("kafka-user").Parse(ntString); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ksfv1.KafkaUser{}).
 		Complete(r)

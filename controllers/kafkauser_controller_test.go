@@ -54,6 +54,6 @@ func TestKafkaUserReconcile(t *testing.T) {
 			return testK8sClient.Get(ctx, kuNamespacedName, createdKU) == nil && createdKU.Status.Phase != ksfv1.KsflowPhaseUnknown
 		}, testWaitDuration, testWaitInterval)
 		assert.Equal(t, ksfv1.KsflowPhaseAvailable, createdKU.Status.Phase)
-		assert.Equal(t, "CN=test-ku.default.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US", createdKU.Status.KafkaPrincipal)
+		assert.Equal(t, "CN=test-ku.default.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US", createdKU.Status.UserName)
 	})
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"text/template"
 
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kerr"
@@ -42,9 +43,9 @@ const (
 
 type KafkaTopicReconciler struct {
 	client.Client
-	Scheme                 *runtime.Scheme
-	KafkaConnectionConfig  ksfv1.KafkaConnectionConfig
-	KafkaTopicSpecDefaults ksfv1.KafkaTopicSpec
+	Scheme           *runtime.Scheme
+	KafkaTopicConfig ksfv1.KafkaTopicConfig
+	NameTemplate     *template.Template
 }
 
 //+kubebuilder:rbac:groups=ksflow.io,resources=kafkatopics,verbs=get;list;watch;create;update;patch;delete
@@ -62,7 +63,7 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Create Kafka client
-	kgoClient, err := r.KafkaConnectionConfig.NewClient()
+	kgoClient, err := r.KafkaTopicConfig.KafkaConnectionConfig.NewClient()
 	if err != nil {
 		logger.Error(err, "unable to create Kafka client")
 		return ctrl.Result{}, err
@@ -72,7 +73,7 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Create a copy of KafkaClient with defaults applied
 	ktCopy := kt.DeepCopy()
-	ktCopySpecWithDefaults, err := ktCopy.Spec.WithDefaultsFrom(&r.KafkaTopicSpecDefaults)
+	ktCopySpecWithDefaults, err := ktCopy.Spec.WithDefaultsFrom(&r.KafkaTopicConfig.KafkaTopicDefaultsConfig)
 	if err != nil {
 		logger.Error(err, "unable to set defaults on Kafka Topic")
 		return ctrl.Result{}, err
@@ -80,7 +81,7 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	ktCopy.Spec = *ktCopySpecWithDefaults
 
 	// Reconcile
-	err = reconcileTopic(ktCopy, kadmClient)
+	err = r.reconcileTopic(ktCopy, kadmClient)
 
 	// Update in-cluster spec w/finalizers
 	if !equality.Semantic.DeepEqual(kt.Finalizers, ktCopy.Finalizers) {
@@ -108,35 +109,44 @@ func (r *KafkaTopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // reconcileTopic handles reconciliation of a KafkaTopic
-func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error {
-	kafkaTopic.Status.LastUpdated = metav1.Now()
-	kafkaTopic.Status.Phase = ksfv1.KsflowPhaseUnknown
-	kafkaTopic.Status.Reason = ""
+func (r *KafkaTopicReconciler) reconcileTopic(kt *ksfv1.KafkaTopic, kadmClient *kadm.Client) error {
+	kt.Status.LastUpdated = metav1.Now()
+	kt.Status.Phase = ksfv1.KsflowPhaseUnknown
+	kt.Status.Reason = ""
 
 	// Validate the KafkaTopic
-	errs := validation.IsDNS1035Label(kafkaTopic.Name)
+	errs := validation.IsDNS1035Label(kt.Name)
 	if len(errs) > 0 {
-		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
-		kafkaTopic.Status.Reason = fmt.Sprintf("invalid KafkaTopic name: %q", errs[0])
-		return fmt.Errorf(kafkaTopic.Status.Reason)
+		kt.Status.Phase = ksfv1.KsflowPhaseError
+		kt.Status.Reason = fmt.Sprintf("invalid KafkaTopic name: %q", errs[0])
+		return fmt.Errorf(kt.Status.Reason)
 	}
-	if kafkaTopic.Spec.Partitions == nil {
-		kafkaTopic.Status.Reason = "topic partitions is required and no defaults found in controller config"
-		return errors.New(kafkaTopic.Status.Reason)
+	if kt.Spec.Partitions == nil {
+		kt.Status.Reason = "topic partitions is required and no defaults found in controller config"
+		return errors.New(kt.Status.Reason)
 	}
-	if kafkaTopic.Spec.ReplicationFactor == nil {
-		kafkaTopic.Status.Reason = "topic replication factor is required and no defaults found in controller config"
-		return errors.New(kafkaTopic.Status.Reason)
+	if kt.Spec.ReplicationFactor == nil {
+		kt.Status.Reason = "topic replication factor is required and no defaults found in controller config"
+		return errors.New(kt.Status.Reason)
 	}
 
-	// Topic deletion & finalizers
-	if !kafkaTopic.DeletionTimestamp.IsZero() {
-		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseDeleting
-	}
-	ret, err := handleTopicDeletionAndFinalizers(kafkaTopic, kadmClient)
+	// Compute the Kafka topic name
+	finalTopicName, err := kt.FinalName(r.NameTemplate)
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
-		kafkaTopic.Status.Reason = err.Error()
+		kt.Status.Phase = ksfv1.KsflowPhaseError
+		kt.Status.Reason = fmt.Sprintf("unable to render Kafka topic from template: %q", err)
+		return fmt.Errorf(kt.Status.Reason)
+	}
+	kt.Status.TopicName = finalTopicName
+
+	// Topic deletion & finalizers
+	if !kt.DeletionTimestamp.IsZero() {
+		kt.Status.Phase = ksfv1.KsflowPhaseDeleting
+	}
+	ret, err := handleTopicDeletionAndFinalizers(kt, kadmClient)
+	if err != nil {
+		kt.Status.Phase = ksfv1.KsflowPhaseError
+		kt.Status.Reason = err.Error()
 		return err
 	}
 	if ret {
@@ -144,35 +154,35 @@ func reconcileTopic(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) error
 	}
 
 	// Create or update topic
-	if err = createOrUpdateTopic(&kafkaTopic.Spec.KafkaTopicInClusterConfiguration, kafkaTopic.FullTopicName(), kadmClient); err != nil {
+	if err = createOrUpdateTopic(&kt.Spec.KafkaTopicInClusterConfiguration, kt.Status.TopicName, kadmClient); err != nil {
 		return err
 	}
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
-		kafkaTopic.Status.Reason = err.Error()
+		kt.Status.Phase = ksfv1.KsflowPhaseError
+		kt.Status.Reason = err.Error()
 		return err
 	}
 
 	// Update status
 	var ticc *ksfv1.KafkaTopicInClusterConfiguration
-	ticc, err = getTopicInClusterConfiguration(kafkaTopic.FullTopicName(), kadmClient)
+	ticc, err = getTopicInClusterConfiguration(kt.Status.TopicName, kadmClient)
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseError
-		kafkaTopic.Status.Reason = err.Error()
+		kt.Status.Phase = ksfv1.KsflowPhaseError
+		kt.Status.Reason = err.Error()
 		return err
 	}
 	if ticc != nil {
-		kafkaTopic.Status.KafkaTopicInClusterConfiguration = *ticc
+		kt.Status.KafkaTopicInClusterConfiguration = *ticc
 	}
 
-	err = topicIsUpToDate(kafkaTopic.Spec.KafkaTopicInClusterConfiguration, kafkaTopic.Status.KafkaTopicInClusterConfiguration)
+	err = topicIsUpToDate(kt.Spec.KafkaTopicInClusterConfiguration, kt.Status.KafkaTopicInClusterConfiguration)
 	if err != nil {
-		kafkaTopic.Status.Phase = ksfv1.KsflowPhaseUpdating
-		kafkaTopic.Status.Reason = err.Error()
+		kt.Status.Phase = ksfv1.KsflowPhaseUpdating
+		kt.Status.Reason = err.Error()
 		return err
 	}
 
-	kafkaTopic.Status.Phase = ksfv1.KsflowPhaseAvailable
+	kt.Status.Phase = ksfv1.KsflowPhaseAvailable
 	return nil
 }
 
@@ -208,19 +218,19 @@ func topicIsUpToDate(specKTICC ksfv1.KafkaTopicInClusterConfiguration, statusKTI
 
 // handleTopicDeletionAndFinalizers updates finalizers if necessary and handles deletion of kafka topics
 // returns false if processing should continue, true if we should finish reconcile
-func handleTopicDeletionAndFinalizers(kafkaTopic *ksfv1.KafkaTopic, kadmClient *kadm.Client) (bool, error) {
-	if kafkaTopic.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(kafkaTopic, KafkaTopicFinalizerName) {
-			controllerutil.AddFinalizer(kafkaTopic, KafkaTopicFinalizerName)
+func handleTopicDeletionAndFinalizers(kt *ksfv1.KafkaTopic, kadmClient *kadm.Client) (bool, error) {
+	if kt.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(kt, KafkaTopicFinalizerName) {
+			controllerutil.AddFinalizer(kt, KafkaTopicFinalizerName)
 		}
 	} else {
 		// The object is being deleted
-		if controllerutil.ContainsFinalizer(kafkaTopic, KafkaTopicFinalizerName) {
+		if controllerutil.ContainsFinalizer(kt, KafkaTopicFinalizerName) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := deleteTopicFromKafka(kafkaTopic.FullTopicName(), kadmClient); err != nil {
+			if err := deleteTopicFromKafka(kt.Status.TopicName, kadmClient); err != nil {
 				return true, err
 			}
-			exists, err := topicExists(kafkaTopic.FullTopicName(), kadmClient)
+			exists, err := topicExists(kt.Status.TopicName, kadmClient)
 			if err != nil {
 				return true, err
 			}
@@ -228,7 +238,7 @@ func handleTopicDeletionAndFinalizers(kafkaTopic *ksfv1.KafkaTopic, kadmClient *
 				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
 				return true, errors.New("waiting for topic to finish deleting")
 			}
-			controllerutil.RemoveFinalizer(kafkaTopic, KafkaTopicFinalizerName)
+			controllerutil.RemoveFinalizer(kt, KafkaTopicFinalizerName)
 		}
 		// Stop reconciliation as the item is being deleted
 		return true, nil
@@ -391,6 +401,16 @@ func deleteTopicFromKafka(topicName string, kadmClient *kadm.Client) error {
 }
 
 func (r *KafkaTopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	ntString := r.KafkaTopicConfig.NameTemplate
+	if len(ntString) == 0 {
+		return errors.New("nameTemplate for kafkaTopics was empty")
+	}
+
+	var err error
+	if r.NameTemplate, err = template.New("kafka-user").Parse(ntString); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ksfv1.KafkaTopic{}).
 		Complete(r)

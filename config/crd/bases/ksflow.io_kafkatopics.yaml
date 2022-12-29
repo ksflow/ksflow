@@ -18,6 +18,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.topicName
+      name: Topic
+      type: string
     - jsonPath: .status.partitions
       name: Partitions
       type: string
@@ -103,6 +106,8 @@ spec:
                   of the topic's partitions.
                 minimum: 1
                 type: integer
+              topicName:
+                type: string
             type: object
         type: object
     served: true

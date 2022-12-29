@@ -87,18 +87,17 @@ func main() {
 	}
 
 	if err = (&controllers.KafkaTopicReconciler{
-		Client:                 mgr.GetClient(),
-		Scheme:                 mgr.GetScheme(),
-		KafkaConnectionConfig:  ksflowConfig.KafkaConnectionConfig,
-		KafkaTopicSpecDefaults: ksflowConfig.KafkaTopicDefaultsConfig,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		KafkaTopicConfig: ksflowConfig.KafkaTopicConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaTopic")
 		os.Exit(1)
 	}
 	if err = (&controllers.KafkaUserReconciler{
-		Client:                mgr.GetClient(),
-		Scheme:                mgr.GetScheme(),
-		KafkaConnectionConfig: ksflowConfig.KafkaConnectionConfig,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		KafkaUserConfig: ksflowConfig.KafkaUserConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KafkaUser")
 		os.Exit(1)

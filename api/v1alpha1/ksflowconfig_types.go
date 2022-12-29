@@ -30,15 +30,31 @@ func (kcc *KafkaConnectionConfig) NewClient() (*kgo.Client, error) {
 type KafkaConnectionConfig struct {
 	// BootstrapServers provides the list of initial Kafka brokers to connect to
 	BootstrapServers []string `json:"bootstrapServers"`
+}
 
-	// PrincipalTemplate contains a Go Template that maps KafkaUser information to a principal.
+type KafkaTopicConfig struct {
+	// KafkaConnectionConfig is config required to create a kafka client that connects to the Kafka cluster
+	KafkaConnectionConfig KafkaConnectionConfig `json:"kafkaConnection"`
+
+	// NameTemplate contains a Go Template that maps a KafkaTopic to a kafka topic.
 	// Currently {{ .Name }} and {{ .Namespace }} are available within the template
-	// and are expected to be used to create a unique principal for the KafkaUser.
-	// The principal type (i.e. "User:") should NOT be included in the principalTemplate
+	// and are expected to be used to create a unique topic for the KafkaTopic.
+	// i.e. "{{ .Namespace }}.{{ .Name }}"
+	// ref: https://kafka.apache.org/documentation/#multitenancy-topic-naming
+	NameTemplate string `json:"nameTemplate"`
+
+	// KafkaTopicDefaults provides default values for any KafkaTopic
+	KafkaTopicDefaultsConfig KafkaTopicSpec `json:"defaults,omitempty"`
+}
+
+type KafkaUserConfig struct {
+	// NameTemplate contains a Go Template that maps a KafkaUser to a kafka user.
+	// Currently {{ .Name }} and {{ .Namespace }} are available within the template
+	// and are expected to be used to create a unique user for the KafkaUser.
+	// The principal type is assumed to be "User:", and should NOT be included in the nameTemplate
 	// i.e. "CN={{ .Name }}.{{ .Namespace }}.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US"
 	// ref: https://docs.confluent.io/platform/current/kafka/authorization.html#principal
-	// +optional
-	PrincipalTemplate *string `json:"principalTemplate"`
+	NameTemplate string `json:"nameTemplate"`
 }
 
 //+kubebuilder:object:root=true
@@ -49,11 +65,11 @@ type KsflowConfig struct {
 
 	crv1.ControllerManagerConfigurationSpec `json:",inline"`
 
-	// KafkaConnectionConfig provides values for connecting to the Kafka cluster
-	KafkaConnectionConfig KafkaConnectionConfig `json:"kafkaConnection"`
+	// KafkaTopicConfig contains the configuration necessary to run the KafkaTopic controller
+	KafkaTopicConfig KafkaTopicConfig `json:"kafkaTopic"`
 
-	// KafkaTopicDefaults provides default values for any KafkaTopic
-	KafkaTopicDefaultsConfig KafkaTopicSpec `json:"kafkaTopicDefaults,omitempty"`
+	// KafkaUserConfig contains the configuration necessary to run the KafkaUser controller
+	KafkaUserConfig KafkaUserConfig `json:"kafkaUser"`
 }
 
 func init() {

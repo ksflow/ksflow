@@ -18,8 +18,8 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.kafkaPrincipal
-      name: Principal
+    - jsonPath: .status.userName
+      name: User
       type: string
     - jsonPath: .status.phase
       name: Status
@@ -53,8 +53,6 @@ spec:
           status:
             description: KafkaUserStatus defines the observed state of KafkaUser
             properties:
-              kafkaPrincipal:
-                type: string
               lastUpdated:
                 format: date-time
                 type: string
@@ -68,6 +66,8 @@ spec:
                 - Error
                 type: string
               reason:
+                type: string
+              userName:
                 type: string
             type: object
         type: object
