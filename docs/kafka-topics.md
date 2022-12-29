@@ -31,8 +31,11 @@ spec:
     segment.bytes: "107374182" # 100 MiB
 ```
 
-KafkaTopics in Kubernetes are namespaced, meaning that multiple KafkaTopics can have the same name.
-To accommodate this, each KafkaTopic will result in an actual topic name of `<namespace>.<name>` in Kafka.
-The above example will therefore create a topic named "my-ns.my-topic".
+KafkaTopics in Kubernetes are namespaced, allowing KafkaTopics to have the same `metadata.name`.
+To accommodate this, the controller is configurable with a `nameTemplate` that generates the topic name based on the 
+KafkaTopic namespace/name.  The helm chart defaults the `nameTemplate` to `{{ .Namespace }}.{{ .Name }}`, resulting in
+topic names such as `my-ns.my-topic` in the example above.
 
 The KafkaTopic name must conform to [RFC 1035](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names).
+
+For Kafka topic naming structures, see Kafka's documentation on [Multitenancy Topic Naming](https://kafka.apache.org/documentation/#multitenancy-topic-naming).
