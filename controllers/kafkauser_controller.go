@@ -85,20 +85,16 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 		return fmt.Errorf(ku.Status.Reason)
 	}
 
-	// Compute the Kafka principal
-	var tplBytes bytes.Buffer
-	if err := r.KafkaPrincipalTemplate.Execute(&tplBytes, types.NamespacedName{Namespace: ku.Namespace, Name: ku.Name}); err != nil {
-		ku.Status.Phase = ksfv1.KsflowPhaseError
-		ku.Status.Reason = fmt.Sprintf("unable to render Kafka principal from template: %q", err)
-		return fmt.Errorf(ku.Status.Reason)
+	// Compute the Kafka principal if it exists
+	if r.KafkaPrincipalTemplate != nil {
+		var tplBytes bytes.Buffer
+		if err := r.KafkaPrincipalTemplate.Execute(&tplBytes, types.NamespacedName{Namespace: ku.Namespace, Name: ku.Name}); err != nil {
+			ku.Status.Phase = ksfv1.KsflowPhaseError
+			ku.Status.Reason = fmt.Sprintf("unable to render Kafka principal from template: %q", err)
+			return fmt.Errorf(ku.Status.Reason)
+		}
+		ku.Status.KafkaPrincipal = tplBytes.String()
 	}
-	kafkaPrincipalString := tplBytes.String()
-	if !strings.HasPrefix(kafkaPrincipalString, "User:") && !strings.HasPrefix(kafkaPrincipalString, "Group:") {
-		ku.Status.Phase = ksfv1.KsflowPhaseError
-		ku.Status.Reason = fmt.Sprintf("unable to render Kafka principal from template, must begin with User: or Group:, was %q", kafkaPrincipalString)
-		return fmt.Errorf(ku.Status.Reason)
-	}
-	ku.Status.KafkaPrincipal = tplBytes.String()
 
 	// Return
 	ku.Status.Phase = ksfv1.KsflowPhaseAvailable
@@ -107,15 +103,17 @@ func (r *KafkaUserReconciler) reconcileUser(ctx context.Context, ku *ksfv1.Kafka
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KafkaUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// parse template for common name to fail fast and also not build template every time
-	principalTemplateStr := "User:ANONYMOUS"
+	// parse template for principal to fail fast and also not build template every time
 	if r.KafkaConnectionConfig.PrincipalTemplate != nil && len(*r.KafkaConnectionConfig.PrincipalTemplate) > 0 {
-		principalTemplateStr = *r.KafkaConnectionConfig.PrincipalTemplate
-	}
-	var err error
-	r.KafkaPrincipalTemplate, err = template.New("kafka-principal").Parse(principalTemplateStr)
-	if err != nil {
-		return err
+		ptString := *r.KafkaConnectionConfig.PrincipalTemplate
+		// basic check for basic misconfiguration
+		if strings.HasPrefix(ptString, "User:") || strings.HasPrefix(ptString, "Group:") {
+			return fmt.Errorf("principal template should not begin with principal type: %q", ptString)
+		}
+		var err error
+		if r.KafkaPrincipalTemplate, err = template.New("kafka-principal").Parse(ptString); err != nil {
+			return err
+		}
 	}
 
 	// setup

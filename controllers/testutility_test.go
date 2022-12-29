@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,6 +40,12 @@ var testEnv *envtest.Environment
 var testCtx context.Context
 var testKafkaContainerWrapper *TestContainerWrapper
 var testCancel context.CancelFunc
+
+const (
+	testNamespace    = "default"
+	testWaitDuration = time.Second * 10
+	testWaitInterval = time.Millisecond * 250
+)
 
 func currTestDir() string {
 	_, currTestFilename, _, _ := runtime.Caller(0)
@@ -91,7 +98,8 @@ func setup() error {
 	}
 
 	kafkaConnectionConfig := ksfv1.KafkaConnectionConfig{
-		BootstrapServers: testKafkaContainerWrapper.GetAddresses(false),
+		BootstrapServers:  testKafkaContainerWrapper.GetAddresses(false),
+		PrincipalTemplate: pointer.String("CN={{ .Name }}.{{ .Namespace }}.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US"),
 	}
 
 	rfi16 := int16(1)
@@ -108,6 +116,15 @@ func setup() error {
 		Scheme:                 k8sManager.GetScheme(),
 		KafkaConnectionConfig:  kafkaConnectionConfig,
 		KafkaTopicSpecDefaults: kafkaTopicDefaultsConfig,
+	}).SetupWithManager(k8sManager)
+	if err != nil {
+		return err
+	}
+
+	err = (&KafkaUserReconciler{
+		Client:                k8sManager.GetClient(),
+		Scheme:                k8sManager.GetScheme(),
+		KafkaConnectionConfig: kafkaConnectionConfig,
 	}).SetupWithManager(k8sManager)
 	if err != nil {
 		return err

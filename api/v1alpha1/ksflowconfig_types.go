@@ -31,9 +31,12 @@ type KafkaConnectionConfig struct {
 	// BootstrapServers provides the list of initial Kafka brokers to connect to
 	BootstrapServers []string `json:"bootstrapServers"`
 
-	// PrincipalTemplate contains a Go Template that maps KafkaUser information to a Principal
+	// PrincipalTemplate contains a Go Template that maps KafkaUser information to a principal.
 	// Currently {{ .Name }} and {{ .Namespace }} are available within the template
-	// Defaults to "User:ANONYMOUS"
+	// and are expected to be used to create a unique principal for the KafkaUser.
+	// The principal type (i.e. "User:") should NOT be included in the principalTemplate
+	// i.e. "CN={{ .Name }}.{{ .Namespace }}.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US"
+	// ref: https://docs.confluent.io/platform/current/kafka/authorization.html#principal
 	// +optional
 	PrincipalTemplate *string `json:"principalTemplate"`
 }
