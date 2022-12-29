@@ -24,11 +24,10 @@ import (
 	"runtime"
 	"testing"
 
-	"k8s.io/utils/pointer"
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	// +kubebuilder:scaffold:imports

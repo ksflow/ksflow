@@ -19,10 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type TestContainerWrapper struct {
@@ -32,11 +33,32 @@ type TestContainerWrapper struct {
 
 func (t *TestContainerWrapper) RunKafka() error {
 	req := testcontainers.ContainerRequest{
-		Image:        fmt.Sprintf("%s:%s", "docker.vectorized.io/vectorized/redpanda", "v22.3.9"),
-		ExposedPorts: []string{"9092/tcp"},
-		Cmd:          []string{"redpanda", "start"},
-		WaitingFor:   wait.ForLog("Successfully started Redpanda!"),
-		AutoRemove:   true,
+		Image:        fmt.Sprintf("%s:%s", "bitnami/kafka", "3.3.1-debian-11-r19"),
+		ExposedPorts: []string{"9092/tcp", "9093/tcp"},
+		Env: map[string]string{
+			"BITNAMI_DEBUG":                            "yes",
+			"KAFKA_ENABLE_KRAFT":                       "yes",
+			"KAFKA_BROKER_ID":                          "1",
+			"KAFKA_CFG_PROCESS_ROLES":                  "broker,controller",
+			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES":      "CONTROLLER",
+			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP": "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT",
+			"KAFKA_CFG_ADVERTISED_LISTENERS":           "PLAINTEXT://localhost:9092",
+			"KAFKA_CFG_EARLY_START_LISTENERS":          "CONTROLLER",
+			"KAFKA_CFG_LISTENERS":                      "PLAINTEXT://:9092,CONTROLLER://:9093",
+			"KAFKA_CFG_INTER_BROKER_LISTENER_NAME":     "PLAINTEXT",
+			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS":       "1@localhost:9093",
+			"KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE":      "false",
+			"KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND": "false",
+		},
+		Cmd:        []string{"/opt/bitnami/scripts/kafka/test-kafka-run.sh"},
+		AutoRemove: false,
+		Files: []testcontainers.ContainerFile{
+			{
+				HostFilePath:      path.Join(currTestDir(), "testdata", "scripts", "test-kafka-run.sh"),
+				ContainerFilePath: "/opt/bitnami/scripts/kafka/test-kafka-run.sh",
+				FileMode:          493, // 755
+			},
+		},
 	}
 
 	container, err := testcontainers.GenericContainer(context.Background(), testcontainers.GenericContainerRequest{
@@ -52,9 +74,27 @@ func (t *TestContainerWrapper) RunKafka() error {
 		return fmt.Errorf("could not get mapped port from the container: %w", err)
 	}
 
+	// set KAFKA_CFG_ADVERTISED_LISTENERS to the port that testcontainers decided to use
+	// ref: https://franklinlindemberg.medium.com/how-to-use-kafka-with-testcontainers-in-golang-applications-9266c738c879
+	kafkaStartFile, err := os.CreateTemp("", "testcontainers_start.sh")
+	if err != nil {
+		panic(err)
+	}
+	defer os.Remove(kafkaStartFile.Name())
+	if _, err = kafkaStartFile.WriteString("#!/bin/bash \n"); err != nil {
+		return err
+	}
+	if _, err = kafkaStartFile.WriteString(fmt.Sprintf("export KAFKA_CFG_ADVERTISED_LISTENERS='PLAINTEXT://localhost:%v'\n", mPort.Int())); err != nil {
+		return err
+	}
+	if err = container.CopyFileToContainer(context.Background(), kafkaStartFile.Name(), "/testcontainers_start.sh", 493); err != nil {
+		return err
+	}
+
 	t.testContainer = container
 	t.testContainerPort = mPort.Int()
 
+	// consider checking port or logs to verify things start up before returning if it is a problem
 	return nil
 }
 
