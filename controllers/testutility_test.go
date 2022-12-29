@@ -24,10 +24,11 @@ import (
 	"runtime"
 	"testing"
 
-	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	ksfv1 "github.com/ksflow/ksflow/api/v1alpha1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	// +kubebuilder:scaffold:imports
@@ -90,7 +91,7 @@ func setup() error {
 	}
 
 	kafkaConnectionConfig := ksfv1.KafkaConnectionConfig{
-		BootstrapServers: testKafkaContainerWrapper.GetAddresses(),
+		BootstrapServers: testKafkaContainerWrapper.GetAddresses(false),
 	}
 
 	rfi16 := int16(1)
