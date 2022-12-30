@@ -13,7 +13,7 @@ Ksflow is a lightweight tool to simplify processing Kafka topics from Kubernetes
 
 :heavy_check_mark: **Low-cost**: no required sidecars or daemonsets
 
-:heavy_check_mark: **Multi-tenancy**: namespace-scoped resources
+:heavy_check_mark: **Multi-tenancy**: namespace-scoped resources & quotas
 
 ## Documentation
 - [Quick Start](./docs/quick-start.md)
