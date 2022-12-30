@@ -53,7 +53,6 @@ type KafkaUserConfig struct {
 	// and are expected to be used to create a unique user for the KafkaUser.
 	// The principal type is assumed to be "User:", and should NOT be included in the nameTemplate
 	// i.e. "CN={{ .Name }}.{{ .Namespace }}.svc,OU=TEST,O=Marketing,L=Charlottesville,ST=Va,C=US"
-	// ref: https://docs.confluent.io/platform/current/kafka/authorization.html#principal
 	NameTemplate string `json:"nameTemplate"`
 }
 
