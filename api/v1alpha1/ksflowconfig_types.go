@@ -67,6 +67,9 @@ type KafkaSchemaConfig struct {
 	// and are expected to be used to create a unique schema for the KafkaSchema.
 	// i.e. "{{ .Namespace }}.{{ .Name }}"
 	NameTemplate string `json:"nameTemplate"`
+
+	// IgnoreSchemaMode ignores any Modes set in the KafkaSchema.  Apicurio registry doesn't support Mode API (returns 404).
+	IgnoreSchemaMode bool `json:"ignoreSchemaMode"`
 }
 
 type KafkaUserConfig struct {

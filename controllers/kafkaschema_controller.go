@@ -135,7 +135,7 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 	}
 
 	// Create or update schema
-	if err = createOrUpdateSubject(&ks.Spec.KafkaSubjectInClusterConfiguration, ks.Status.SubjectName, srClient); err != nil {
+	if err = r.createOrUpdateSubject(&ks.Spec.KafkaSubjectInClusterConfiguration, ks.Status.SubjectName, srClient); err != nil {
 		return err
 	}
 	if err != nil {
@@ -146,7 +146,7 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 
 	// Update status
 	var sicc *ksfv1.KafkaSubjectInClusterConfiguration
-	sicc, err = getSubjectInClusterConfiguration(ks.Status.SubjectName, srClient)
+	sicc, err = r.getSubjectInClusterConfiguration(ks.Status.SubjectName, srClient)
 	if err != nil {
 		ks.Status.Phase = ksfv1.KsflowPhaseError
 		ks.Status.Reason = err.Error()
@@ -163,7 +163,7 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 	}
 	ks.Status.SchemaCount = sCount
 
-	err = subjectIsUpToDate(ks.Spec.KafkaSubjectInClusterConfiguration, ks.Status.KafkaSubjectInClusterConfiguration)
+	err = r.subjectIsUpToDate(ks.Spec.KafkaSubjectInClusterConfiguration, ks.Status.KafkaSubjectInClusterConfiguration)
 	if err != nil {
 		ks.Status.Phase = ksfv1.KsflowPhaseUpdating
 		ks.Status.Reason = err.Error()
@@ -175,8 +175,8 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 }
 
 // subjectIsUpToDate returns an error indicating why the subject is not up-to-date, or nil if it is up-to-date
-func subjectIsUpToDate(specKSICC ksfv1.KafkaSubjectInClusterConfiguration, statusKSICC ksfv1.KafkaSubjectInClusterConfiguration) error {
-	if specKSICC.Mode != statusKSICC.Mode {
+func (r *KafkaSchemaReconciler) subjectIsUpToDate(specKSICC ksfv1.KafkaSubjectInClusterConfiguration, statusKSICC ksfv1.KafkaSubjectInClusterConfiguration) error {
+	if !r.KafkaSchemaConfig.IgnoreSchemaMode && specKSICC.Mode != statusKSICC.Mode {
 		return fmt.Errorf("spec mode %q does not match status mode %q", specKSICC.Mode.ToFranz().String(), statusKSICC.Mode.ToFranz().String())
 	}
 	if specKSICC.Type != statusKSICC.Type {
@@ -235,22 +235,22 @@ func handleSchemaDeletionAndFinalizers(ks *ksfv1.KafkaSchema, srClient *sr.Clien
 	return false, nil
 }
 
-func createOrUpdateSubject(
+func (r *KafkaSchemaReconciler) createOrUpdateSubject(
 	desired *ksfv1.KafkaSubjectInClusterConfiguration,
 	subjectName string,
 	srClient *sr.Client) error {
 
 	var sicc *ksfv1.KafkaSubjectInClusterConfiguration
-	sicc, err := getSubjectInClusterConfiguration(subjectName, srClient)
+	sicc, err := r.getSubjectInClusterConfiguration(subjectName, srClient)
 	if err != nil {
 		return err
 	}
 	if sicc != nil {
-		if err = updateSubjectInRegistry(desired, sicc, subjectName, srClient); err != nil {
+		if err = r.updateSubjectInRegistry(desired, sicc, subjectName, srClient); err != nil {
 			return err
 		}
 	} else {
-		if err = createSubjectInRegistry(desired, subjectName, srClient); err != nil {
+		if err = r.createSubjectInRegistry(desired, subjectName, srClient); err != nil {
 			return err
 		}
 	}
@@ -281,21 +281,31 @@ func subjectExists(subjectName string, srClient *sr.Client) (bool, error) {
 }
 
 // getSubjectInClusterConfiguration retrieves the current observed state for the given subjectName by making any necessary calls to the Registry
-func getSubjectInClusterConfiguration(subjectName string, srClient *sr.Client) (*ksfv1.KafkaSubjectInClusterConfiguration, error) {
+func (r *KafkaSchemaReconciler) getSubjectInClusterConfiguration(subjectName string, srClient *sr.Client) (*ksfv1.KafkaSubjectInClusterConfiguration, error) {
 	kscc := ksfv1.KafkaSubjectInClusterConfiguration{}
 
-	modeResults := srClient.Mode(context.Background(), subjectName)
-	for _, mr := range modeResults {
-		if mr.Err != nil {
-			return nil, mr.Err
-		}
-		if mr.Subject != subjectName {
-			return nil, fmt.Errorf("received unexpected subject name when querying modes, was %q, expected %q", mr.Subject, subjectName)
-		}
-		kscc.Mode = ksfv1.KafkaSchemaMode(mr.Mode.String())
+	found, err := subjectExists(subjectName, srClient)
+	if err != nil {
+		return nil, err
 	}
-	if kscc.Mode == ksfv1.KafkaSchemaModeUnknown {
-		return nil, fmt.Errorf("empty mode results for subjectname %q", subjectName)
+	if !found {
+		return nil, nil
+	}
+
+	if !r.KafkaSchemaConfig.IgnoreSchemaMode {
+		modeResults := srClient.Mode(context.Background(), subjectName)
+		for _, mr := range modeResults {
+			if mr.Err != nil {
+				return nil, mr.Err
+			}
+			if mr.Subject != subjectName {
+				return nil, fmt.Errorf("received unexpected subject name when querying modes, was %q, expected %q", mr.Subject, subjectName)
+			}
+			kscc.Mode = ksfv1.KafkaSchemaMode(mr.Mode.String())
+		}
+		if kscc.Mode == ksfv1.KafkaSchemaModeUnknown {
+			return nil, fmt.Errorf("empty mode results for subjectname %q", subjectName)
+		}
 	}
 
 	compatibilityLevelResults := srClient.CompatibilityLevel(context.Background(), subjectName)
@@ -325,13 +335,13 @@ func getSubjectInClusterConfiguration(subjectName string, srClient *sr.Client) (
 
 // updateSubjectInRegistry compares the desired state (coming from spec) and the observed state (coming from the status),
 // making any necessary calls to the Registry to bring them closer together.
-func updateSubjectInRegistry(
+func (r *KafkaSchemaReconciler) updateSubjectInRegistry(
 	desired *ksfv1.KafkaSubjectInClusterConfiguration,
 	observed *ksfv1.KafkaSubjectInClusterConfiguration,
 	subjectName string,
 	srClient *sr.Client) error {
 
-	if desired.Mode != observed.Mode {
+	if !r.KafkaSchemaConfig.IgnoreSchemaMode && desired.Mode != observed.Mode {
 		mode := desired.Mode.ToFranz()
 		modeResults := srClient.SetMode(context.Background(), mode, true, subjectName)
 		if len(modeResults) == 0 {
@@ -389,18 +399,30 @@ func updateSubjectInRegistry(
 }
 
 // createSubjectInRegistry creates the specified kafka subject using the provided Schema Registry client
-func createSubjectInRegistry(kscc *ksfv1.KafkaSubjectInClusterConfiguration, subjectName string, srClient *sr.Client) error {
-	mode := kscc.Mode.ToFranz()
-	modeResults := srClient.SetMode(context.Background(), mode, true, subjectName)
-	if len(modeResults) == 0 {
-		return errors.New("empty mode results")
+func (r *KafkaSchemaReconciler) createSubjectInRegistry(kscc *ksfv1.KafkaSubjectInClusterConfiguration, subjectName string, srClient *sr.Client) error {
+	schema := sr.Schema{
+		Schema:     kscc.Schema,
+		Type:       kscc.Type.ToFranz(),
+		References: kscc.References,
 	}
-	for _, mr := range modeResults {
-		if mr.Err != nil {
-			return mr.Err
+	_, err := srClient.CreateSchema(context.Background(), subjectName, schema)
+	if err != nil {
+		return err
+	}
+
+	if !r.KafkaSchemaConfig.IgnoreSchemaMode {
+		mode := kscc.Mode.ToFranz()
+		modeResults := srClient.SetMode(context.Background(), mode, true, subjectName)
+		if len(modeResults) == 0 {
+			return errors.New("empty mode results")
 		}
-		if mr.Subject != subjectName || mr.Mode != mode {
-			return fmt.Errorf("unexpected mode result, %v", mr)
+		for _, mr := range modeResults {
+			if mr.Err != nil {
+				return mr.Err
+			}
+			if mr.Subject != subjectName || mr.Mode != mode {
+				return fmt.Errorf("unexpected mode result, %v", mr)
+			}
 		}
 	}
 
@@ -416,16 +438,6 @@ func createSubjectInRegistry(kscc *ksfv1.KafkaSubjectInClusterConfiguration, sub
 		if cr.Subject != subjectName || cr.Level != compatLevel {
 			return fmt.Errorf("unexpected compatibility level result, %v", cr)
 		}
-	}
-
-	schema := sr.Schema{
-		Schema:     kscc.Schema,
-		Type:       kscc.Type.ToFranz(),
-		References: kscc.References,
-	}
-	_, err := srClient.CreateSchema(context.Background(), subjectName, schema)
-	if err != nil {
-		return err
 	}
 
 	return nil

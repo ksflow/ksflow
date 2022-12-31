@@ -139,6 +139,7 @@ func setup() error {
 		KafkaSchemaConfig: ksfv1.KafkaSchemaConfig{
 			SchemaRegistryConnectionConfig: registryConnectionConfig,
 			NameTemplate:                   "{{ .Namespace }}.{{ .Name }}",
+			IgnoreSchemaMode:               true, // using apicurio
 		},
 	}).SetupWithManager(k8sManager)
 	if err != nil {

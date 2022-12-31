@@ -47,7 +47,7 @@ var (
 			KafkaSubjectInClusterConfiguration: ksfv1.KafkaSubjectInClusterConfiguration{
 				Schema:             ksSchema,
 				Type:               ksfv1.KafkaSchemaTypeAvro,
-				CompatibilityLevel: ksfv1.KafkaSchemaCompatibilityLevelBackward,
+				CompatibilityLevel: ksfv1.KafkaSchemaCompatibilityLevelNone,
 				Mode:               ksfv1.KafkaSchemaModeReadWrite,
 				References:         []sr.SchemaReference{},
 			},
@@ -67,6 +67,7 @@ func TestKafkaSchemaReconcile(t *testing.T) {
 
 		ksCopy := ks.DeepCopy()
 		ksCopy.Spec.Schema = `{"type":"record","namespace":"test","name":"Test","fields":[{"name":"Bar","type":"string"}]}`
+		ksCopy.SetResourceVersion(createdKS.GetResourceVersion())
 		assert.NoError(t, testK8sClient.Update(ctx, ksCopy))
 		updatedKS := &ksfv1.KafkaSchema{}
 		assert.Eventually(t, func() bool {
