@@ -141,6 +141,11 @@ func (in *KafkaSchemaSpec) DeepCopy() *KafkaSchemaSpec {
 func (in *KafkaSchemaStatus) DeepCopyInto(out *KafkaSchemaStatus) {
 	*out = *in
 	in.KafkaSubjectInClusterConfiguration.DeepCopyInto(&out.KafkaSubjectInClusterConfiguration)
+	if in.SchemaCount != nil {
+		in, out := &in.SchemaCount, &out.SchemaCount
+		*out = new(int32)
+		**out = **in
+	}
 	in.LastUpdated.DeepCopyInto(&out.LastUpdated)
 }
 

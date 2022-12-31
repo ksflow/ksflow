@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type TestContainerWrapper struct {
@@ -64,9 +65,7 @@ func (t *TestContainerWrapper) RunKafka() error {
 			"KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND": "false",
 			"KAFKA_CFG_AUTHORIZER_CLASS_NAME":          "org.apache.kafka.metadata.authorizer.StandardAuthorizer",
 		},
-		//WaitingFor: wait.ForLog("INFO [KafkaRaftServer nodeId=1] Kafka Server started (kafka.server.KafkaRaftServer)"),
-		Cmd: []string{"/opt/bitnami/scripts/kafka/test-kafka-run.sh"},
-		//Entrypoint: []string{"/bin/sh", "-c", "tail -f /dev/null"},
+		Cmd:        []string{"/opt/bitnami/scripts/kafka/test-kafka-run.sh"},
 		AutoRemove: false,
 		Files: []testcontainers.ContainerFile{
 			{
@@ -140,6 +139,33 @@ func (t *TestContainerWrapper) RunKafka() error {
 	return nil
 }
 
+func (t *TestContainerWrapper) RunRegistry() error {
+	req := testcontainers.ContainerRequest{
+		Image:        fmt.Sprintf("%s:%s", "apicurio/apicurio-registry-mem", "2.4.1.Final"),
+		ExposedPorts: []string{"8080/tcp"},
+		WaitingFor:   wait.ForListeningPort("8080/tcp"),
+		AutoRemove:   true,
+	}
+
+	container, err := testcontainers.GenericContainer(context.Background(), testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		return fmt.Errorf("could not create container: %w", err)
+	}
+
+	mPort, err := container.MappedPort(context.Background(), "8080")
+	if err != nil {
+		return fmt.Errorf("could not get mapped port from the container: %w", err)
+	}
+
+	t.testContainer = container
+	t.testContainerPort = mPort.Int()
+
+	return nil
+}
+
 func (t *TestContainerWrapper) CleanUp() error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
@@ -147,14 +173,14 @@ func (t *TestContainerWrapper) CleanUp() error {
 	return t.testContainer.Terminate(ctx)
 }
 
-func (t *TestContainerWrapper) GetAddresses(secure bool) []string {
-	return []string{t.GetAddress(secure)}
+func (t *TestContainerWrapper) GetAddresses(secure bool, path string) []string {
+	return []string{t.GetAddress(secure, path)}
 }
 
-func (t *TestContainerWrapper) GetAddress(secure bool) string {
+func (t *TestContainerWrapper) GetAddress(secure bool, path string) string {
 	p := t.testContainerPort
 	if secure {
 		p = t.testContainerSecurePort
 	}
-	return fmt.Sprintf("localhost:%d", p)
+	return fmt.Sprintf("localhost:%d%s", p, path)
 }

@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -154,6 +155,13 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 	if sicc != nil {
 		ks.Status.KafkaSubjectInClusterConfiguration = *sicc
 	}
+	sCount, err := schemaCount(ks.Status.SubjectName, srClient)
+	if err != nil {
+		ks.Status.Phase = ksfv1.KsflowPhaseError
+		ks.Status.Reason = err.Error()
+		return err
+	}
+	ks.Status.SchemaCount = sCount
 
 	err = subjectIsUpToDate(ks.Spec.KafkaSubjectInClusterConfiguration, ks.Status.KafkaSubjectInClusterConfiguration)
 	if err != nil {
@@ -247,6 +255,15 @@ func createOrUpdateSubject(
 		}
 	}
 	return nil
+}
+
+// schemaCount returns the number of schemas for the subject
+func schemaCount(subjectName string, srClient *sr.Client) (*int32, error) {
+	schemas, err := srClient.Schemas(context.Background(), subjectName, sr.HideDeleted)
+	if err != nil {
+		return nil, err
+	}
+	return pointer.Int32(int32(len(schemas))), nil
 }
 
 // subjectExists returns true if the subject exists

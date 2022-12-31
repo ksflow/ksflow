@@ -67,6 +67,7 @@ type KafkaSchemaStatus struct {
 	KafkaSubjectInClusterConfiguration `json:",inline"`
 
 	SubjectName string      `json:"subjectName,omitempty"`
+	SchemaCount *int32      `json:"schemaCount,omitempty"`
 	Phase       KsflowPhase `json:"phase,omitempty"`
 	Reason      string      `json:"reason,omitempty"`
 	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
@@ -76,6 +77,7 @@ type KafkaSchemaStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=ks
 // +kubebuilder:printcolumn:name="Subject",type=string,JSONPath=`.status.subjectName`
+// +kubebuilder:printcolumn:name="Versions",type=string,JSONPath=`.status.schemaCount`
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.status.type`
 // +kubebuilder:printcolumn:name="Compatibility",type=string,JSONPath=`.status.compatibilityLevel`
 // +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.status.mode`

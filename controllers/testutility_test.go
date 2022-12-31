@@ -39,6 +39,7 @@ var testK8sClient client.Client
 var testEnv *envtest.Environment
 var testCtx context.Context
 var testKafkaContainerWrapper *TestContainerWrapper
+var testRegistryContainerWrapper *TestContainerWrapper
 var testCancel context.CancelFunc
 
 const (
@@ -81,6 +82,11 @@ func setup() error {
 		return err
 	}
 
+	testRegistryContainerWrapper = &TestContainerWrapper{}
+	if err = testRegistryContainerWrapper.RunRegistry(); err != nil {
+		return err
+	}
+
 	if err = ksfv1.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
@@ -98,7 +104,11 @@ func setup() error {
 	}
 
 	kafkaConnectionConfig := ksfv1.KafkaConnectionConfig{
-		BootstrapServers: testKafkaContainerWrapper.GetAddresses(false),
+		BootstrapServers: testKafkaContainerWrapper.GetAddresses(false, ""),
+	}
+
+	registryConnectionConfig := ksfv1.SchemaRegistryConnectionConfig{
+		URLs: testRegistryContainerWrapper.GetAddresses(false, "/apis/ccompat/v6"),
 	}
 
 	rfi16 := int16(1)
@@ -117,6 +127,18 @@ func setup() error {
 			KafkaConnectionConfig:    kafkaConnectionConfig,
 			NameTemplate:             "{{ .Namespace }}.{{ .Name }}",
 			KafkaTopicDefaultsConfig: kafkaTopicDefaultsConfig,
+		},
+	}).SetupWithManager(k8sManager)
+	if err != nil {
+		return err
+	}
+
+	err = (&KafkaSchemaReconciler{
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		KafkaSchemaConfig: ksfv1.KafkaSchemaConfig{
+			SchemaRegistryConnectionConfig: registryConnectionConfig,
+			NameTemplate:                   "{{ .Namespace }}.{{ .Name }}",
 		},
 	}).SetupWithManager(k8sManager)
 	if err != nil {
@@ -146,4 +168,5 @@ func teardown() {
 	testCancel()
 	_ = testEnv.Stop()
 	_ = testKafkaContainerWrapper.CleanUp()
+	_ = testRegistryContainerWrapper.CleanUp()
 }

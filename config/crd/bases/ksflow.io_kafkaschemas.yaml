@@ -21,6 +21,9 @@ spec:
     - jsonPath: .status.subjectName
       name: Subject
       type: string
+    - jsonPath: .status.schemaCount
+      name: Versions
+      type: string
     - jsonPath: .status.type
       name: Type
       type: string
@@ -175,6 +178,9 @@ spec:
                 type: array
               schema:
                 type: string
+              schemaCount:
+                format: int32
+                type: integer
               subjectName:
                 type: string
               type:
