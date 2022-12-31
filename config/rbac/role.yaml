@@ -8,6 +8,32 @@ rules:
 - apiGroups:
   - ksflow.io
   resources:
+  - kafkaschemas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaschemas/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
+  - kafkaschemas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ksflow.io
+  resources:
   - kafkatopics
   verbs:
   - create

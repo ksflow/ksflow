@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// FinalName is the actual Kafka topic name used on the Kafka cluster
+// FinalName is the actual Kafka user name used on the Kafka cluster
 func (ku *KafkaUser) FinalName(tpl *template.Template) (string, error) {
 	var tplBytes bytes.Buffer
 	if err := tpl.Execute(&tplBytes, types.NamespacedName{Namespace: ku.Namespace, Name: ku.Name}); err != nil {

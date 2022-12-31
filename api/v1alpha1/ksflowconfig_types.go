@@ -18,18 +18,29 @@ package v1alpha1
 
 import (
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crv1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 )
 
-// NewClient retrieves a Kafka client from the KafkaConfig
+// NewClient retrieves a Kafka client from the KafkaConnectionConfig
 func (kcc *KafkaConnectionConfig) NewClient() (*kgo.Client, error) {
 	return kgo.NewClient(kgo.SeedBrokers(kcc.BootstrapServers...))
+}
+
+// NewClient retrieves a Schema Registry client from the SchemaRegistryConnectionConfig
+func (srcc *SchemaRegistryConnectionConfig) NewClient() (*sr.Client, error) {
+	return sr.NewClient(sr.URLs(srcc.URLs...))
 }
 
 type KafkaConnectionConfig struct {
 	// BootstrapServers provides the list of initial Kafka brokers to connect to
 	BootstrapServers []string `json:"bootstrapServers"`
+}
+
+type SchemaRegistryConnectionConfig struct {
+	// URLs provides the endpoint URLs for the schema registry
+	URLs []string `json:"urls"`
 }
 
 type KafkaTopicConfig struct {
@@ -45,6 +56,17 @@ type KafkaTopicConfig struct {
 
 	// KafkaTopicDefaults provides default values for any KafkaTopic
 	KafkaTopicDefaultsConfig KafkaTopicSpec `json:"defaults,omitempty"`
+}
+
+type KafkaSchemaConfig struct {
+	// SchemaRegistryConnectionConfig is config required to create a schema registry client
+	SchemaRegistryConnectionConfig SchemaRegistryConnectionConfig `json:"schemaRegistryConnection"`
+
+	// NameTemplate contains a Go Template that maps a KafkaSchema to a kafka schema.
+	// Currently {{ .Name }} and {{ .Namespace }} are available within the template
+	// and are expected to be used to create a unique schema for the KafkaSchema.
+	// i.e. "{{ .Namespace }}.{{ .Name }}"
+	NameTemplate string `json:"nameTemplate"`
 }
 
 type KafkaUserConfig struct {
@@ -69,6 +91,9 @@ type KsflowConfig struct {
 
 	// KafkaUserConfig contains the configuration necessary to run the KafkaUser controller
 	KafkaUserConfig KafkaUserConfig `json:"kafkaUser"`
+
+	// KafkaSchemaConfig contains the configuration necessary to run the KafkaSchema controller
+	KafkaSchemaConfig KafkaSchemaConfig `json:"kafkaSchema"`
 }
 
 func init() {

@@ -1,0 +1,195 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: kafkaschemas.ksflow.io
+spec:
+  group: ksflow.io
+  names:
+    kind: KafkaSchema
+    listKind: KafkaSchemaList
+    plural: kafkaschemas
+    shortNames:
+    - ks
+    singular: kafkaschema
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.schemaName
+      name: Schema
+      type: string
+    - jsonPath: .status.type
+      name: Type
+      type: string
+    - jsonPath: .status.compatibilityLevel
+      name: Compatibility
+      type: string
+    - jsonPath: .status.mode
+      name: Mode
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .status.reason
+      name: Reason
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: KafkaSchema is the Schema for the kafkaschemas API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: KafkaSchemaSpec defines the desired state of KafkaSchema
+            properties:
+              compatibilityLevel:
+                default: BACKWARD
+                description: KafkaSchemaCompatibilityLevel defines the compatibility
+                  type
+                enum:
+                - BACKWARD
+                - BACKWARD_TRANSITIVE
+                - FORWARD
+                - FORWARD_TRANSITIVE
+                - FULL
+                - FULL_TRANSITIVE
+                - NONE
+                type: string
+              mode:
+                default: READWRITE
+                description: KafkaSchemaMode defines the mode
+                enum:
+                - IMPORT
+                - READONLY
+                - READWRITE
+                type: string
+              references:
+                items:
+                  description: "SchemaReference is a way for a one schema to reference
+                    another. The details for how referencing is done are type specific;
+                    for example, JSON objects that use the key \"$ref\" can refer
+                    to another schema via URL. For more details on references, see
+                    the following link: \n https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#schema-references
+                    https://docs.confluent.io/platform/current/schema-registry/develop/api.html"
+                  properties:
+                    name:
+                      type: string
+                    subject:
+                      type: string
+                    version:
+                      type: integer
+                  required:
+                  - name
+                  - subject
+                  - version
+                  type: object
+                type: array
+              schema:
+                type: string
+              type:
+                default: AVRO
+                description: KafkaSchemaType defines the schema type
+                enum:
+                - AVRO
+                - JSON
+                - PROTOBUF
+                type: string
+            required:
+            - schema
+            type: object
+          status:
+            description: KafkaSchemaStatus defines the observed state of KafkaSchema
+            properties:
+              compatibilityLevel:
+                default: BACKWARD
+                description: KafkaSchemaCompatibilityLevel defines the compatibility
+                  type
+                enum:
+                - BACKWARD
+                - BACKWARD_TRANSITIVE
+                - FORWARD
+                - FORWARD_TRANSITIVE
+                - FULL
+                - FULL_TRANSITIVE
+                - NONE
+                type: string
+              lastUpdated:
+                format: date-time
+                type: string
+              mode:
+                default: READWRITE
+                description: KafkaSchemaMode defines the mode
+                enum:
+                - IMPORT
+                - READONLY
+                - READWRITE
+                type: string
+              phase:
+                description: KsflowPhase defines the phase
+                enum:
+                - ""
+                - Updating
+                - Deleting
+                - Available
+                - Error
+                type: string
+              reason:
+                type: string
+              references:
+                items:
+                  description: "SchemaReference is a way for a one schema to reference
+                    another. The details for how referencing is done are type specific;
+                    for example, JSON objects that use the key \"$ref\" can refer
+                    to another schema via URL. For more details on references, see
+                    the following link: \n https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#schema-references
+                    https://docs.confluent.io/platform/current/schema-registry/develop/api.html"
+                  properties:
+                    name:
+                      type: string
+                    subject:
+                      type: string
+                    version:
+                      type: integer
+                  required:
+                  - name
+                  - subject
+                  - version
+                  type: object
+                type: array
+              schema:
+                type: string
+              schemaName:
+                type: string
+              type:
+                default: AVRO
+                description: KafkaSchemaType defines the schema type
+                enum:
+                - AVRO
+                - JSON
+                - PROTOBUF
+                type: string
+            required:
+            - schema
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
