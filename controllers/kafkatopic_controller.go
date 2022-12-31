@@ -235,7 +235,7 @@ func handleTopicDeletionAndFinalizers(kt *ksfv1.KafkaTopic, kadmClient *kadm.Cli
 				return true, err
 			}
 			if exists {
-				// ref: return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
+				// return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
 				return true, errors.New("waiting for topic to finish deleting")
 			}
 			controllerutil.RemoveFinalizer(kt, KafkaTopicFinalizerName)

@@ -38,6 +38,7 @@ const (
 type KafkaSchemaType string
 
 const (
+	KafkaSchemaTypeUnknown  KafkaSchemaType = ""
 	KafkaSchemaTypeAvro     KafkaSchemaType = "AVRO"
 	KafkaSchemaTypeJson     KafkaSchemaType = "JSON"
 	KafkaSchemaTypeProtobuf KafkaSchemaType = "PROTOBUF"
@@ -60,6 +61,7 @@ func (kst KafkaSchemaType) ToFranz() sr.SchemaType {
 type KafkaSchemaCompatibilityLevel string
 
 const (
+	KafkaSchemaCompatibilityLevelUnknown            KafkaSchemaCompatibilityLevel = ""
 	KafkaSchemaCompatibilityLevelBackward           KafkaSchemaCompatibilityLevel = "BACKWARD"
 	KafkaSchemaCompatibilityLevelBackwardTransitive KafkaSchemaCompatibilityLevel = "BACKWARD_TRANSITIVE"
 	KafkaSchemaCompatibilityLevelForward            KafkaSchemaCompatibilityLevel = "FORWARD"
@@ -94,6 +96,7 @@ func (kscl KafkaSchemaCompatibilityLevel) ToFranz() sr.CompatibilityLevel {
 type KafkaSchemaMode string
 
 const (
+	KafkaSchemaModeUnknown   KafkaSchemaMode = ""
 	KafkaSchemaModeImport    KafkaSchemaMode = "IMPORT"
 	KafkaSchemaModeReadOnly  KafkaSchemaMode = "READONLY"
 	KafkaSchemaModeReadWrite KafkaSchemaMode = "READWRITE"

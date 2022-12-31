@@ -30,7 +30,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+)
+
+const (
+	KafkaSchemaFinalizerName = "kafka-schema.ksflow.io/finalizer"
 )
 
 type KafkaSchemaReconciler struct {
@@ -106,13 +111,13 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 	}
 
 	// Compute the Kafka schema name
-	finalSchemaName, err := ks.FinalName(r.NameTemplate)
+	finalSubjectName, err := ks.FinalName(r.NameTemplate)
 	if err != nil {
 		ks.Status.Phase = ksfv1.KsflowPhaseError
 		ks.Status.Reason = fmt.Sprintf("unable to render Kafka schema from template: %q", err)
 		return fmt.Errorf(ks.Status.Reason)
 	}
-	ks.Status.SchemaName = finalSchemaName
+	ks.Status.SubjectName = finalSubjectName
 
 	// Schema deletion & finalizers
 	if !ks.DeletionTimestamp.IsZero() {
@@ -129,7 +134,7 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 	}
 
 	// Create or update schema
-	if err = createOrUpdateSchema(&ks.Spec.KafkaSchemaInClusterConfiguration, ks.Status.SchemaName, srClient); err != nil {
+	if err = createOrUpdateSubject(&ks.Spec.KafkaSubjectInClusterConfiguration, ks.Status.SubjectName, srClient); err != nil {
 		return err
 	}
 	if err != nil {
@@ -139,18 +144,18 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 	}
 
 	// Update status
-	var ticc *ksfv1.KafkaSchemaInClusterConfiguration
-	ticc, err = getSchemaInClusterConfiguration(ks.Status.SchemaName, srClient)
+	var sicc *ksfv1.KafkaSubjectInClusterConfiguration
+	sicc, err = getSubjectInClusterConfiguration(ks.Status.SubjectName, srClient)
 	if err != nil {
 		ks.Status.Phase = ksfv1.KsflowPhaseError
 		ks.Status.Reason = err.Error()
 		return err
 	}
-	if ticc != nil {
-		ks.Status.KafkaSchemaInClusterConfiguration = *ticc
+	if sicc != nil {
+		ks.Status.KafkaSubjectInClusterConfiguration = *sicc
 	}
 
-	err = schemaIsUpToDate(ks.Spec.KafkaSchemaInClusterConfiguration, ks.Status.KafkaSchemaInClusterConfiguration)
+	err = subjectIsUpToDate(ks.Spec.KafkaSubjectInClusterConfiguration, ks.Status.KafkaSubjectInClusterConfiguration)
 	if err != nil {
 		ks.Status.Phase = ksfv1.KsflowPhaseUpdating
 		ks.Status.Reason = err.Error()
@@ -161,9 +166,214 @@ func (r *KafkaSchemaReconciler) reconcileSchema(ks *ksfv1.KafkaSchema, srClient 
 	return nil
 }
 
-// createSchemaInRegistry creates the specified kafka schema using the provided Schema Registry client
-func createSchemaInRegistry(kss *ksfv1.KafkaSchemaInClusterConfiguration, subjectName string, srClient *sr.Client) error {
-	mode := kss.Mode.ToFranz()
+// subjectIsUpToDate returns an error indicating why the subject is not up-to-date, or nil if it is up-to-date
+func subjectIsUpToDate(specKSICC ksfv1.KafkaSubjectInClusterConfiguration, statusKSICC ksfv1.KafkaSubjectInClusterConfiguration) error {
+	if specKSICC.Mode != statusKSICC.Mode {
+		return fmt.Errorf("spec mode %q does not match status mode %q", specKSICC.Mode.ToFranz().String(), statusKSICC.Mode.ToFranz().String())
+	}
+	if specKSICC.Type != statusKSICC.Type {
+		return fmt.Errorf("spec type %q does not match status type %q", specKSICC.Type.ToFranz().String(), statusKSICC.Type.ToFranz().String())
+	}
+	if specKSICC.CompatibilityLevel != statusKSICC.CompatibilityLevel {
+		return fmt.Errorf("spec compatibility level %q does not match status compatibility level %q", specKSICC.CompatibilityLevel.ToFranz().String(), statusKSICC.CompatibilityLevel.ToFranz().String())
+	}
+	if specKSICC.Schema != statusKSICC.Schema {
+		return fmt.Errorf(`spec schema does not match status schema`)
+	}
+	if len(specKSICC.References) != len(statusKSICC.References) {
+		return fmt.Errorf(`spec has %d references, which does not match status which has %d references`, len(specKSICC.References), len(statusKSICC.References))
+	}
+	for i := range specKSICC.References {
+		if specKSICC.References[i].Name != statusKSICC.References[i].Name {
+			return fmt.Errorf(`spec reference name %s does not match status reference name %s`, specKSICC.References[i].Name, statusKSICC.References[i].Name)
+		}
+		if specKSICC.References[i].Subject != statusKSICC.References[i].Subject {
+			return fmt.Errorf(`spec reference subject %s does not match status reference subject %s`, specKSICC.References[i].Subject, statusKSICC.References[i].Subject)
+		}
+		if specKSICC.References[i].Version != statusKSICC.References[i].Version {
+			return fmt.Errorf(`spec reference version %d does not match status reference version %d`, specKSICC.References[i].Version, statusKSICC.References[i].Version)
+		}
+	}
+	return nil
+}
+
+// handleSchemaDeletionAndFinalizers updates finalizers if necessary and handles deletion of kafka schemas
+// returns false if processing should continue, true if we should finish reconcile
+func handleSchemaDeletionAndFinalizers(ks *ksfv1.KafkaSchema, srClient *sr.Client) (bool, error) {
+	if ks.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(ks, KafkaSchemaFinalizerName) {
+			controllerutil.AddFinalizer(ks, KafkaSchemaFinalizerName)
+		}
+	} else {
+		// The object is being deleted
+		if controllerutil.ContainsFinalizer(ks, KafkaSchemaFinalizerName) {
+			// our finalizer is present, so lets handle any external dependency
+			if err := deleteSubjectFromRegistry(ks.Status.SubjectName, srClient); err != nil {
+				return true, err
+			}
+			exists, err := subjectExists(ks.Status.SubjectName, srClient)
+			if err != nil {
+				return true, err
+			}
+			if exists {
+				// return err so that it uses exponential backoff (ref: https://github.com/kubernetes-sigs/controller-runtime/issues/808#issuecomment-639845414)
+				return true, errors.New("waiting for schema to finish deleting")
+			}
+			controllerutil.RemoveFinalizer(ks, KafkaSchemaFinalizerName)
+		}
+		// Stop reconciliation as the item is being deleted
+		return true, nil
+	}
+	return false, nil
+}
+
+func createOrUpdateSubject(
+	desired *ksfv1.KafkaSubjectInClusterConfiguration,
+	subjectName string,
+	srClient *sr.Client) error {
+
+	var sicc *ksfv1.KafkaSubjectInClusterConfiguration
+	sicc, err := getSubjectInClusterConfiguration(subjectName, srClient)
+	if err != nil {
+		return err
+	}
+	if sicc != nil {
+		if err = updateSubjectInRegistry(desired, sicc, subjectName, srClient); err != nil {
+			return err
+		}
+	} else {
+		if err = createSubjectInRegistry(desired, subjectName, srClient); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// subjectExists returns true if the subject exists
+func subjectExists(subjectName string, srClient *sr.Client) (bool, error) {
+	subjects, err := srClient.Subjects(context.Background(), sr.ShowDeleted)
+	if err != nil {
+		return false, err
+	}
+	for _, s := range subjects {
+		if s == subjectName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// getSubjectInClusterConfiguration retrieves the current observed state for the given subjectName by making any necessary calls to the Registry
+func getSubjectInClusterConfiguration(subjectName string, srClient *sr.Client) (*ksfv1.KafkaSubjectInClusterConfiguration, error) {
+	kscc := ksfv1.KafkaSubjectInClusterConfiguration{}
+
+	modeResults := srClient.Mode(context.Background(), subjectName)
+	for _, mr := range modeResults {
+		if mr.Err != nil {
+			return nil, mr.Err
+		}
+		if mr.Subject != subjectName {
+			return nil, fmt.Errorf("received unexpected subject name when querying modes, was %q, expected %q", mr.Subject, subjectName)
+		}
+		kscc.Mode = ksfv1.KafkaSchemaMode(mr.Mode.String())
+	}
+	if kscc.Mode == ksfv1.KafkaSchemaModeUnknown {
+		return nil, fmt.Errorf("empty mode results for subjectname %q", subjectName)
+	}
+
+	compatibilityLevelResults := srClient.CompatibilityLevel(context.Background(), subjectName)
+	for _, clr := range compatibilityLevelResults {
+		if clr.Err != nil {
+			return nil, clr.Err
+		}
+		if clr.Subject != subjectName {
+			return nil, fmt.Errorf("received unexpected subject name when querying compatibility levels, was %q, expected %q", clr.Subject, subjectName)
+		}
+		kscc.CompatibilityLevel = ksfv1.KafkaSchemaCompatibilityLevel(clr.Level.String())
+	}
+	if kscc.CompatibilityLevel == ksfv1.KafkaSchemaCompatibilityLevelUnknown {
+		return nil, fmt.Errorf("empty compatibility level results for subjectname %q", subjectName)
+	}
+
+	subjectSchema, err := srClient.SchemaByVersion(context.Background(), subjectName, -1, sr.HideDeleted)
+	if err != nil {
+		return nil, err
+	}
+	kscc.Type = ksfv1.KafkaSchemaType(subjectSchema.Type.String())
+	kscc.Schema = subjectSchema.Schema.Schema
+	kscc.References = subjectSchema.References
+
+	return &kscc, nil
+}
+
+// updateSubjectInRegistry compares the desired state (coming from spec) and the observed state (coming from the status),
+// making any necessary calls to the Registry to bring them closer together.
+func updateSubjectInRegistry(
+	desired *ksfv1.KafkaSubjectInClusterConfiguration,
+	observed *ksfv1.KafkaSubjectInClusterConfiguration,
+	subjectName string,
+	srClient *sr.Client) error {
+
+	if desired.Mode != observed.Mode {
+		mode := desired.Mode.ToFranz()
+		modeResults := srClient.SetMode(context.Background(), mode, true, subjectName)
+		if len(modeResults) == 0 {
+			return errors.New("empty mode results")
+		}
+		for _, mr := range modeResults {
+			if mr.Err != nil {
+				return mr.Err
+			}
+			if mr.Subject != subjectName || mr.Mode != mode {
+				return fmt.Errorf("unexpected mode result, %v", mr)
+			}
+		}
+	}
+
+	if desired.CompatibilityLevel != observed.CompatibilityLevel {
+		compatLevel := desired.CompatibilityLevel.ToFranz()
+		compatResults := srClient.SetCompatibilityLevel(context.Background(), compatLevel, subjectName)
+		if len(compatResults) == 0 {
+			return errors.New("empty compatibility level results")
+		}
+		for _, cr := range compatResults {
+			if cr.Err != nil {
+				return cr.Err
+			}
+			if cr.Subject != subjectName || cr.Level != compatLevel {
+				return fmt.Errorf("unexpected compatibility level result, %v", cr)
+			}
+		}
+	}
+
+	refAreEqual := len(desired.References) == len(observed.References)
+	if refAreEqual {
+		for i, d := range desired.References {
+			o := observed.References[i]
+			if d.Name != o.Name || d.Subject != o.Subject || d.Version != o.Version {
+				refAreEqual = false
+				break
+			}
+		}
+	}
+	if desired.Type != observed.Type || desired.Schema != observed.Schema || !refAreEqual {
+		schema := sr.Schema{
+			Schema:     desired.Schema,
+			Type:       desired.Type.ToFranz(),
+			References: desired.References,
+		}
+		_, err := srClient.CreateSchema(context.Background(), subjectName, schema)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// createSubjectInRegistry creates the specified kafka subject using the provided Schema Registry client
+func createSubjectInRegistry(kscc *ksfv1.KafkaSubjectInClusterConfiguration, subjectName string, srClient *sr.Client) error {
+	mode := kscc.Mode.ToFranz()
 	modeResults := srClient.SetMode(context.Background(), mode, true, subjectName)
 	if len(modeResults) == 0 {
 		return errors.New("empty mode results")
@@ -177,7 +387,7 @@ func createSchemaInRegistry(kss *ksfv1.KafkaSchemaInClusterConfiguration, subjec
 		}
 	}
 
-	compatLevel := kss.CompatibilityLevel.ToFranz()
+	compatLevel := kscc.CompatibilityLevel.ToFranz()
 	compatResults := srClient.SetCompatibilityLevel(context.Background(), compatLevel, subjectName)
 	if len(compatResults) == 0 {
 		return errors.New("empty compatibility level results")
@@ -192,9 +402,9 @@ func createSchemaInRegistry(kss *ksfv1.KafkaSchemaInClusterConfiguration, subjec
 	}
 
 	schema := sr.Schema{
-		Schema:     kss.Schema,
-		Type:       kss.Type.ToFranz(),
-		References: kss.References,
+		Schema:     kscc.Schema,
+		Type:       kscc.Type.ToFranz(),
+		References: kscc.References,
 	}
 	_, err := srClient.CreateSchema(context.Background(), subjectName, schema)
 	if err != nil {
@@ -204,9 +414,8 @@ func createSchemaInRegistry(kss *ksfv1.KafkaSchemaInClusterConfiguration, subjec
 	return nil
 }
 
-// deleteSchemaFromRegistry deletes the specified schema using the provided Schema Registry client
-func deleteSchemaFromRegistry(subjectName string, srClient *sr.Client) error {
-	// listing is not efficient if many subjects... revisit this
+// deleteSubjectFromRegistry deletes the specified subject using the provided Schema Registry client
+func deleteSubjectFromRegistry(subjectName string, srClient *sr.Client) error {
 	notSoftDeleted, err := srClient.Subjects(context.Background(), sr.HideDeleted)
 	if err != nil {
 		return err

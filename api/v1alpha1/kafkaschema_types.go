@@ -34,8 +34,8 @@ func (ku *KafkaSchema) FinalName(tpl *template.Template) (string, error) {
 	return tplBytes.String(), nil
 }
 
-// KafkaSchemaInClusterConfiguration is the part of the KafkaSchemaSpec that maps directly to a real Kafka schema
-type KafkaSchemaInClusterConfiguration struct {
+// KafkaSubjectInClusterConfiguration is the part of the KafkaSchemaSpec that maps directly to a real SR subject
+type KafkaSubjectInClusterConfiguration struct {
 	Schema string `json:"schema"`
 
 	// +kubebuilder:default:=AVRO
@@ -59,14 +59,14 @@ type KafkaSchemaInClusterConfiguration struct {
 
 // KafkaSchemaSpec defines the desired state of KafkaSchema
 type KafkaSchemaSpec struct {
-	KafkaSchemaInClusterConfiguration `json:",inline"`
+	KafkaSubjectInClusterConfiguration `json:",inline"`
 }
 
 // KafkaSchemaStatus defines the observed state of KafkaSchema
 type KafkaSchemaStatus struct {
-	KafkaSchemaInClusterConfiguration `json:",inline"`
+	KafkaSubjectInClusterConfiguration `json:",inline"`
 
-	SchemaName  string      `json:"schemaName,omitempty"`
+	SubjectName string      `json:"subjectName,omitempty"`
 	Phase       KsflowPhase `json:"phase,omitempty"`
 	Reason      string      `json:"reason,omitempty"`
 	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
@@ -75,7 +75,7 @@ type KafkaSchemaStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=ks
-// +kubebuilder:printcolumn:name="Schema",type=string,JSONPath=`.status.schemaName`
+// +kubebuilder:printcolumn:name="Subject",type=string,JSONPath=`.status.subjectName`
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.status.type`
 // +kubebuilder:printcolumn:name="Compatibility",type=string,JSONPath=`.status.compatibilityLevel`
 // +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.status.mode`

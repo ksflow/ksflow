@@ -18,8 +18,8 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.schemaName
-      name: Schema
+    - jsonPath: .status.subjectName
+      name: Subject
       type: string
     - jsonPath: .status.type
       name: Type
@@ -175,7 +175,7 @@ spec:
                 type: array
               schema:
                 type: string
-              schemaName:
+              subjectName:
                 type: string
               type:
                 default: AVRO
